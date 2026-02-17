@@ -1,0 +1,172 @@
+.onboarding {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.onboarding-container {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-2xl);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-lg);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+  transition: width 0.3s ease;
+}
+
+.step-indicator {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  margin-bottom: var(--spacing-xl);
+}
+
+.step {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.step-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+.step h1, .step h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-sm);
+}
+
+.step-subtitle {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-xl);
+}
+
+.form-group {
+  width: 100%;
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-sm);
+  text-align: left;
+}
+
+.amount-display {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-lg);
+}
+
+.amount-display.primary {
+  color: var(--primary);
+}
+
+.amount-display.purple {
+  color: var(--purple);
+}
+
+.amount-display.orange {
+  color: var(--orange);
+}
+
+.percentage-display {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-lg);
+}
+
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: var(--spacing-sm);
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.toggle-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.shared-amount-section {
+  width: 100%;
+  margin-top: var(--spacing-xl);
+}
+
+.shared-amount-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-sm);
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-lg);
+}
+
+.button-group {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-2xl);
+}
+
+.button-group .btn {
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .onboarding {
+    padding: var(--spacing-md);
+  }
+  
+  .onboarding-container {
+    padding: var(--spacing-lg);
+  }
+  
+  .step h1, .step h2 {
+    font-size: 1.5rem;
+  }
+  
+  .amount-display {
+    font-size: 2.5rem;
+  }
+}
