@@ -242,7 +242,21 @@ function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
         <div className="question-details fade-in">
           <div className="form-group">
             <label>Montant : <strong>{amount} €</strong></label>
-            <input type="range" min="0" max="5000" step={question.frequency === 'monthly' ? 10 : 50} value={amount} onChange={e => setAmount(parseInt(e.target.value))} />
+            <input 
+              type="range" 
+              min="0" 
+              max="5000" 
+              step={question.frequency === 'monthly' ? 10 : 50} 
+              value={amount} 
+              onChange={e => setAmount(parseInt(e.target.value))} 
+            />
+            <input 
+              type="number" 
+              className="amount-input-direct" 
+              value={amount} 
+              onChange={e => setAmount(parseInt(e.target.value) || 0)} 
+              placeholder="Ou saisir directement..."
+            />
           </div>
 
           {question.frequency !== 'monthly' && (
@@ -348,6 +362,7 @@ function FreeAddCard({ categoryId, hasShared, sharedTransfer, onAdd }) {
       <div className="form-group">
         <label>Montant : <strong>{form.amount} €</strong></label>
         <input type="range" min="0" max="5000" step="10" value={form.amount} onChange={e => s('amount', parseInt(e.target.value))} />
+        <input type="number" className="amount-input-direct" value={form.amount} onChange={e => s('amount', parseInt(e.target.value) || 0)} placeholder="Ou saisir directement..." />
       </div>
       <div className="form-group">
         <label>Fréquence</label>

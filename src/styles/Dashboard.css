@@ -529,3 +529,120 @@
   color: var(--gray-500);
   margin-bottom: 0.5rem;
 }
+
+/* ── Détail des virements ── */
+.transfer-detail-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  border: 2px solid var(--primary);
+}
+
+.transfer-detail-card > h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-lg);
+  color: var(--primary);
+}
+
+.transfer-section {
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.transfer-section:last-of-type {
+  border-bottom: none;
+}
+
+.transfer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.transfer-icon {
+  font-size: 1.5rem;
+}
+
+.transfer-header h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.transfer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.9375rem;
+}
+
+.transfer-item span {
+  color: var(--gray-700);
+}
+
+.transfer-amount {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.transfer-amount.purple {
+  color: #7C3AED;
+}
+
+.transfer-amount.orange {
+  color: #F59E0B;
+}
+
+.transfer-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+}
+
+.transfer-total span {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.transfer-total strong {
+  font-size: 1.25rem;
+  color: var(--primary);
+}
+
+.transfer-grand-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--primary), #7C3AED);
+  border-radius: var(--radius-lg);
+  margin-top: var(--spacing-md);
+}
+
+.transfer-grand-total span {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.grand-total-amount {
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.checkin-btn {
+  width: 100%;
+}

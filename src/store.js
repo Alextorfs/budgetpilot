@@ -174,12 +174,14 @@ const useStore = create((set, get) => ({
   updatePlan: async (updates) => {
     const { activePlan } = get()
     if (!activePlan) return
+
     const { data, error } = await supabase
       .from('plans')
       .update(updates)
       .eq('id', activePlan.id)
       .select()
       .single()
+
     if (error) throw error
     set({ activePlan: data })
   },
@@ -197,6 +199,27 @@ const useStore = create((set, get) => ({
 
     if (error) throw error
     set({ userProfile: data })
+  },
+
+  createCheckIn: async (data) => {
+    const { activePlan } = get()
+    if (!activePlan) return
+
+    const { error } = await supabase
+      .from('check_ins')
+      .insert({
+        plan_id: activePlan.id,
+        month: data.month,
+        year: data.year,
+        fun_savings_done: data.fun_savings_done,
+        fun_savings_amount: data.fun_savings_amount,
+        personal_provisions_done: data.personal_provisions_done,
+        personal_provisions_amount: data.personal_provisions_amount,
+        common_transfer_done: data.common_transfer_done,
+        common_transfer_amount: data.common_transfer_amount,
+      })
+
+    if (error) throw error
   },
 
   reset: () => set({
