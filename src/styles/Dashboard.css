@@ -646,3 +646,39 @@
 .checkin-btn {
   width: 100%;
 }
+
+/* ── Alertes ── */
+.alert {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+  border-left: 4px solid;
+}
+
+.alert-info {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  color: #1E40AF;
+}
+
+.alert-success {
+  background: #ECFDF5;
+  border-color: #10B981;
+  color: #065F46;
+}
+
+/* ── Zones budget ── */
+.zone-subtitle {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  margin: -0.5rem 0 1rem 0;
+}
+
+.shared-savings-zone {
+  background: linear-gradient(135deg, #F3E8FF, #FAF5FF);
+  border: 2px solid #A78BFA;
+}
+
+.projection-mini {
+  text-align: center;
+}

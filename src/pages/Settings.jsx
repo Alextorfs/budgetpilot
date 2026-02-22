@@ -6,30 +6,28 @@ const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Aoû
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
 
 export default function Settings({ onBack }) {
-  const { userProfile, activePlan, items, updateProfile, updatePlan, addItem, deleteItem } = useStore()
+  const { userProfile, activePlan, items, updateProfile, updatePlan, addItem, updateItem, deleteItem } = useStore()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState('')
 
-  // ── Formulaire salaire / plan ──
   const [salary, setSalary] = useState(activePlan.monthly_salary_net || 0)
   const [funSavings, setFunSavings] = useState(activePlan.fun_savings_monthly_target || 0)
 
-  // ── Formulaire compte commun ──
   const [myTransfer, setMyTransfer] = useState(userProfile.shared_monthly_transfer || 0)
   const [partnerTransfer, setPartnerTransfer] = useState(userProfile.partner_monthly_transfer || 0)
 
-  // ── Formulaire épargne existante ──
   const [existingSavings, setExistingSavings] = useState(userProfile.existing_savings || 0)
+  const [existingSharedSavings, setExistingSharedSavings] = useState(userProfile.existing_shared_savings || 0)
 
-  // ── Formulaire revenu exceptionnel ──
   const [showBonusForm, setShowBonusForm] = useState(false)
+  const [editingBonus, setEditingBonus] = useState(null)
   const [bonusForm, setBonusForm] = useState({
     title: '',
     amount: 0,
     month: new Date().getMonth() + 1,
+    goesToSavings: false,
   })
 
-  // Revenus exceptionnels existants
   const bonusItems = items.filter(i => i.kind === 'income' && i.frequency === 'yearly')
 
   const showSaved = (msg) => {
@@ -68,7 +66,19 @@ export default function Settings({ onBack }) {
     setSaving(true)
     try {
       await updateProfile({ existing_savings: existingSavings })
-      showSaved('✅ Épargne mise à jour !')
+      showSaved('✅ Épargne perso mise à jour !')
+    } catch (e) {
+      alert('Erreur : ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveSharedSavings = async () => {
+    setSaving(true)
+    try {
+      await updateProfile({ existing_shared_savings: existingSharedSavings })
+      showSaved('✅ Épargne commune mise à jour !')
     } catch (e) {
       alert('Erreur : ' + e.message)
     } finally {
@@ -80,21 +90,33 @@ export default function Settings({ onBack }) {
     if (!bonusForm.title.trim() || bonusForm.amount <= 0) return
     setSaving(true)
     try {
-      await addItem({
-        title: bonusForm.title,
-        category: 'other',
-        kind: 'income',
-        frequency: 'yearly',
-        amount: bonusForm.amount,
-        payment_month: bonusForm.month,
-        allocation_mode: null,
-        sharing_type: 'individual',
-        my_share_percent: 100,
-        is_included_in_shared_transfer: false,
-      })
-      setBonusForm({ title: '', amount: 0, month: new Date().getMonth() + 1 })
+      if (editingBonus) {
+        await updateItem(editingBonus.id, {
+          title: bonusForm.title,
+          amount: bonusForm.amount,
+          payment_month: bonusForm.month,
+          goes_to_savings: bonusForm.goesToSavings,
+        })
+        showSaved('✅ Revenu modifié !')
+      } else {
+        await addItem({
+          title: bonusForm.title,
+          category: 'other',
+          kind: 'income',
+          frequency: 'yearly',
+          amount: bonusForm.amount,
+          payment_month: bonusForm.month,
+          allocation_mode: null,
+          sharing_type: 'individual',
+          my_share_percent: 100,
+          is_included_in_shared_transfer: false,
+          goes_to_savings: bonusForm.goesToSavings,
+        })
+        showSaved('✅ Revenu exceptionnel ajouté !')
+      }
+      setBonusForm({ title: '', amount: 0, month: new Date().getMonth() + 1, goesToSavings: false })
       setShowBonusForm(false)
-      showSaved('✅ Revenu exceptionnel ajouté !')
+      setEditingBonus(null)
     } catch (e) {
       alert('Erreur : ' + e.message)
     } finally {
@@ -102,16 +124,40 @@ export default function Settings({ onBack }) {
     }
   }
 
+  const handleEditBonus = (item) => {
+    setBonusForm({
+      title: item.title,
+      amount: item.amount,
+      month: item.payment_month || new Date().getMonth() + 1,
+      goesToSavings: item.goes_to_savings || false,
+    })
+    setEditingBonus(item)
+    setShowBonusForm(true)
+  }
+
   const handleDeleteBonus = async (id) => {
     if (!confirm('Supprimer ce revenu ?')) return
-    await deleteItem(id)
+    setSaving(true)
+    try {
+      await deleteItem(id)
+      showSaved('✅ Revenu supprimé !')
+    } catch (e) {
+      alert('Erreur : ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancelBonus = () => {
+    setBonusForm({ title: '', amount: 0, month: new Date().getMonth() + 1, goesToSavings: false })
+    setShowBonusForm(false)
+    setEditingBonus(null)
   }
 
   return (
     <div className="settings-page">
       <div className="settings-container">
 
-        {/* Header */}
         <div className="settings-header">
           <button className="btn btn-secondary" onClick={onBack}>← Retour</button>
           <h1>⚙️ Paramètres</h1>
@@ -119,7 +165,7 @@ export default function Settings({ onBack }) {
 
         {saved && <div className="saved-banner">{saved}</div>}
 
-        {/* ── Salaire & épargne ── */}
+        {/* Salaire & épargne */}
         <div className="settings-card">
           <h2>💰 Salaire & Épargne projet</h2>
 
@@ -146,9 +192,9 @@ export default function Settings({ onBack }) {
           </button>
         </div>
 
-        {/* ── Épargne existante ── */}
+        {/* Épargne perso */}
         <div className="settings-card">
-          <h2>🏦 Épargne disponible (stock)</h2>
+          <h2>🏦 Épargne projet (stock)</h2>
           <p className="help-text">Ton épargne actuelle, utilisée pour les projections de fin d'année</p>
 
           <div className="form-group">
@@ -163,39 +209,57 @@ export default function Settings({ onBack }) {
           </button>
         </div>
 
-        {/* ── Compte commun ── */}
+        {/* Compte commun */}
         {userProfile.has_shared_account && (
-          <div className="settings-card">
-            <h2>🏠 Compte Commun</h2>
+          <>
+            <div className="settings-card">
+              <h2>🏠 Compte Commun</h2>
 
-            <div className="form-group">
-              <label>💳 Ton virement mensuel</label>
-              <div className="amount-display orange">{myTransfer.toLocaleString('fr-FR')} €</div>
-              <input type="range" min="0" max="5000" step="50" value={myTransfer} onChange={e => setMyTransfer(parseInt(e.target.value))} />
-              <div className="range-labels"><span>0 €</span><span>5 000 €</span></div>
-              <input type="number" className="number-input" value={myTransfer} onChange={e => setMyTransfer(parseInt(e.target.value) || 0)} />
+              <div className="form-group">
+                <label>💳 Ton virement mensuel</label>
+                <div className="amount-display orange">{myTransfer.toLocaleString('fr-FR')} €</div>
+                <input type="range" min="0" max="5000" step="50" value={myTransfer} onChange={e => setMyTransfer(parseInt(e.target.value))} />
+                <div className="range-labels"><span>0 €</span><span>5 000 €</span></div>
+                <input type="number" className="number-input" value={myTransfer} onChange={e => setMyTransfer(parseInt(e.target.value) || 0)} />
+              </div>
+
+              <div className="form-group">
+                <label>💳 Virement mensuel de ton/ta partenaire</label>
+                <div className="amount-display orange">{partnerTransfer.toLocaleString('fr-FR')} €</div>
+                <input type="range" min="0" max="5000" step="50" value={partnerTransfer} onChange={e => setPartnerTransfer(parseInt(e.target.value))} />
+                <div className="range-labels"><span>0 €</span><span>5 000 €</span></div>
+                <input type="number" className="number-input" value={partnerTransfer} onChange={e => setPartnerTransfer(parseInt(e.target.value) || 0)} />
+              </div>
+
+              <div className="total-preview">
+                <span>Total mensuel compte commun :</span>
+                <strong>{(myTransfer + partnerTransfer).toLocaleString('fr-FR')} €</strong>
+              </div>
+
+              <button className="btn btn-primary" onClick={handleSaveCommon} disabled={saving}>
+                {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+              </button>
             </div>
 
-            <div className="form-group">
-              <label>💳 Virement mensuel de ton/ta partenaire</label>
-              <div className="amount-display orange">{partnerTransfer.toLocaleString('fr-FR')} €</div>
-              <input type="range" min="0" max="5000" step="50" value={partnerTransfer} onChange={e => setPartnerTransfer(parseInt(e.target.value))} />
-              <div className="range-labels"><span>0 €</span><span>5 000 €</span></div>
-              <input type="number" className="number-input" value={partnerTransfer} onChange={e => setPartnerTransfer(parseInt(e.target.value) || 0)} />
-            </div>
+            <div className="settings-card">
+              <h2>💰 Épargne Commune (stock)</h2>
+              <p className="help-text">L'épargne commune actuelle pour les provisions futures</p>
 
-            <div className="total-preview">
-              <span>Total mensuel compte commun :</span>
-              <strong>{(myTransfer + partnerTransfer).toLocaleString('fr-FR')} €</strong>
-            </div>
+              <div className="form-group">
+                <div className="amount-display purple">{existingSharedSavings.toLocaleString('fr-FR')} €</div>
+                <input type="range" min="0" max="50000" step="500" value={existingSharedSavings} onChange={e => setExistingSharedSavings(parseInt(e.target.value))} />
+                <div className="range-labels"><span>0 €</span><span>50 000 €</span></div>
+                <input type="number" className="number-input" value={existingSharedSavings} onChange={e => setExistingSharedSavings(parseInt(e.target.value) || 0)} />
+              </div>
 
-            <button className="btn btn-primary" onClick={handleSaveCommon} disabled={saving}>
-              {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-            </button>
-          </div>
+              <button className="btn btn-primary" onClick={handleSaveSharedSavings} disabled={saving}>
+                {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+              </button>
+            </div>
+          </>
         )}
 
-        {/* ── Revenus exceptionnels ── */}
+        {/* Revenus exceptionnels */}
         <div className="settings-card">
           <div className="card-header-row">
             <div>
@@ -207,7 +271,6 @@ export default function Settings({ onBack }) {
             </button>
           </div>
 
-          {/* Liste des revenus exceptionnels */}
           {bonusItems.length === 0 ? (
             <div className="empty-bonus">Aucun revenu exceptionnel prévu</div>
           ) : (
@@ -215,11 +278,15 @@ export default function Settings({ onBack }) {
               {bonusItems.map(item => (
                 <div key={item.id} className="bonus-item">
                   <div className="bonus-info">
-                    <div className="bonus-title">{item.title}</div>
+                    <div className="bonus-title">
+                      {item.title}
+                      {item.goes_to_savings && <span className="bonus-badge">→ épargne</span>}
+                    </div>
                     <div className="bonus-meta">{MONTHS[(item.payment_month || 1) - 1]} · revenu ponctuel</div>
                   </div>
                   <div className="bonus-right">
                     <div className="bonus-amount">+{fmt(item.amount)}</div>
+                    <button className="btn-icon-sm" onClick={() => handleEditBonus(item)} title="Modifier">✏️</button>
                     <button className="btn-icon-sm" onClick={() => handleDeleteBonus(item.id)} title="Supprimer">🗑️</button>
                   </div>
                 </div>
@@ -227,10 +294,9 @@ export default function Settings({ onBack }) {
             </div>
           )}
 
-          {/* Formulaire ajout */}
           {showBonusForm && (
             <div className="bonus-form">
-              <h3>Nouveau revenu exceptionnel</h3>
+              <h3>{editingBonus ? 'Modifier le revenu' : 'Nouveau revenu exceptionnel'}</h3>
 
               <div className="form-group">
                 <label>Titre</label>
@@ -268,14 +334,28 @@ export default function Settings({ onBack }) {
                 </select>
               </div>
 
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={bonusForm.goesToSavings} 
+                    onChange={e => setBonusForm(p => ({ ...p, goesToSavings: e.target.checked }))}
+                  />
+                  <span>Mettre directement dans l'épargne projet</span>
+                </label>
+                <p className="help-text" style={{ marginTop: '0.25rem' }}>
+                  Si non coché, le revenu ira dans ton argent libre du mois
+                </p>
+              </div>
+
               <div className="bonus-form-actions">
-                <button className="btn btn-secondary" onClick={() => setShowBonusForm(false)}>Annuler</button>
+                <button className="btn btn-secondary" onClick={handleCancelBonus}>Annuler</button>
                 <button
                   className="btn btn-primary"
                   onClick={handleAddBonus}
                   disabled={!bonusForm.title.trim() || bonusForm.amount <= 0 || saving}
                 >
-                  {saving ? 'Ajout...' : 'Ajouter ce revenu'}
+                  {saving ? (editingBonus ? 'Modification...' : 'Ajout...') : (editingBonus ? 'Modifier' : 'Ajouter')}
                 </button>
               </div>
             </div>

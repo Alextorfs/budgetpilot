@@ -8,70 +8,72 @@ const CATEGORIES_CONFIG = [
   {
     id: 'housing', label: '🏠 Logement',
     questions: [
-      { id: 'rent', label: 'Loyer ou crédit immobilier ?', amount: 800, frequency: 'monthly' },
-      { id: 'charges', label: 'Charges de copropriété ?', amount: 150, frequency: 'monthly' },
-      { id: 'electricity', label: 'Électricité ?', amount: 80, frequency: 'monthly' },
-      { id: 'gas', label: 'Gaz ?', amount: 60, frequency: 'monthly' },
-      { id: 'water', label: 'Eau ?', amount: 40, frequency: 'monthly' },
-      { id: 'home_insurance', label: 'Assurance habitation ?', amount: 200, frequency: 'yearly', month: 1 },
-      { id: 'property_tax', label: 'Taxe foncière ?', amount: 800, frequency: 'yearly', month: 10 },
+      { id: 'rent', label: 'Loyer ou crédit immobilier', amount: 800, defaultFreq: 'monthly' },
+      { id: 'charges', label: 'Charges de copropriété', amount: 150, defaultFreq: 'monthly' },
+      { id: 'electricity', label: 'Électricité', amount: 80, defaultFreq: 'monthly' },
+      { id: 'gas', label: 'Gaz', amount: 60, defaultFreq: 'monthly' },
+      { id: 'water', label: 'Eau', amount: 40, defaultFreq: 'monthly' },
+      { id: 'home_insurance', label: 'Assurance habitation', amount: 200, defaultFreq: 'yearly', month: 1 },
+      { id: 'property_tax', label: 'Taxe foncière', amount: 800, defaultFreq: 'yearly', month: 10 },
     ]
   },
   {
     id: 'vehicle', label: '🚗 Véhicule',
     questions: [
-      { id: 'fuel', label: 'Carburant ?', amount: 150, frequency: 'monthly' },
-      { id: 'car_insurance', label: 'Assurance auto ?', amount: 600, frequency: 'yearly', month: 1 },
-      { id: 'car_maintenance', label: 'Entretien/révision ?', amount: 300, frequency: 'yearly', month: 9 },
-      { id: 'car_inspection', label: 'Contrôle technique ?', amount: 80, frequency: 'yearly', month: 6 },
-      { id: 'parking', label: 'Parking/garage ?', amount: 80, frequency: 'monthly' },
+      { id: 'fuel', label: 'Carburant', amount: 150, defaultFreq: 'monthly' },
+      { id: 'car_insurance', label: 'Assurance auto', amount: 600, defaultFreq: 'yearly', month: 1 },
+      { id: 'car_maintenance', label: 'Entretien/révision', amount: 300, defaultFreq: 'yearly', month: 9 },
+      { id: 'car_inspection', label: 'Contrôle technique', amount: 80, defaultFreq: 'yearly', month: 6 },
+      { id: 'parking', label: 'Parking/garage', amount: 80, defaultFreq: 'monthly' },
     ]
   },
   {
     id: 'subscriptions', label: '📺 Abonnements',
     questions: [
-      { id: 'netflix', label: 'Netflix ?', amount: 14, frequency: 'monthly' },
-      { id: 'disney', label: 'Disney+ ?', amount: 9, frequency: 'monthly' },
-      { id: 'spotify', label: 'Spotify / Apple Music ?', amount: 10, frequency: 'monthly' },
-      { id: 'gym', label: 'Salle de sport ?', amount: 40, frequency: 'monthly' },
-      { id: 'ai', label: 'Abonnement IA (ChatGPT, Claude...) ?', amount: 20, frequency: 'monthly' },
-      { id: 'cloud', label: 'Stockage cloud (iCloud, Google...) ?', amount: 3, frequency: 'monthly' },
-      { id: 'amazon', label: 'Amazon Prime ?', amount: 7, frequency: 'monthly' },
+      { id: 'netflix', label: 'Netflix', amount: 14, defaultFreq: 'monthly' },
+      { id: 'disney', label: 'Disney+', amount: 9, defaultFreq: 'monthly' },
+      { id: 'spotify', label: 'Spotify / Apple Music', amount: 10, defaultFreq: 'monthly' },
+      { id: 'gym', label: 'Salle de sport', amount: 40, defaultFreq: 'monthly' },
+      { id: 'ai', label: 'Abonnement IA (ChatGPT, Claude...)', amount: 20, defaultFreq: 'monthly' },
+      { id: 'cloud', label: 'Stockage cloud (iCloud, Google...)', amount: 3, defaultFreq: 'monthly' },
+      { id: 'amazon', label: 'Amazon Prime', amount: 7, defaultFreq: 'monthly' },
     ]
   },
   {
     id: 'health', label: '🏥 Santé',
     questions: [
-      { id: 'mutuelle', label: 'Mutuelle santé ?', amount: 80, frequency: 'monthly' },
-      { id: 'dentist', label: 'Dentiste (budget annuel) ?', amount: 200, frequency: 'yearly', month: 6 },
-      { id: 'glasses', label: 'Lunettes/lentilles ?', amount: 300, frequency: 'yearly', month: 6 },
+      { id: 'mutuelle', label: 'Mutuelle santé', amount: 80, defaultFreq: 'monthly' },
+      { id: 'life_insurance', label: 'Assurance vie', amount: 50, defaultFreq: 'monthly' },
+      { id: 'medical', label: 'Rendez-vous médicaux (kinés, IRM...)', amount: 300, defaultFreq: 'yearly', month: 6 },
+      { id: 'dentist', label: 'Dentiste (budget annuel)', amount: 200, defaultFreq: 'yearly', month: 6 },
+      { id: 'glasses', label: 'Lunettes/lentilles', amount: 300, defaultFreq: 'yearly', month: 6 },
     ]
   },
   {
     id: 'internet', label: '📱 Internet/Téléphone',
     questions: [
-      { id: 'internet', label: 'Box internet ?', amount: 30, frequency: 'monthly' },
-      { id: 'mobile', label: 'Forfait mobile ?', amount: 20, frequency: 'monthly' },
+      { id: 'internet', label: 'Box internet', amount: 30, defaultFreq: 'monthly' },
+      { id: 'mobile', label: 'Forfait mobile', amount: 20, defaultFreq: 'monthly' },
     ]
   },
   {
-    id: 'taxes', label: '📄 Impôts',
+    id: 'pension', label: '💼 Épargne retraite',
     questions: [
-      { id: 'income_tax', label: 'Impôts sur le revenu ?', amount: 2000, frequency: 'yearly', month: 9 },
+      { id: 'pension_savings', label: 'Épargne pension', amount: 100, defaultFreq: 'monthly' },
     ]
   },
   {
     id: 'vacation', label: '✈️ Vacances',
     questions: [
-      { id: 'vacation', label: 'Budget vacances annuel ?', amount: 1500, frequency: 'yearly', month: 7 },
-      { id: 'weekends', label: 'Week-ends / courts séjours ?', amount: 500, frequency: 'yearly', month: 4 },
+      { id: 'vacation', label: 'Budget vacances annuel', amount: 1500, defaultFreq: 'yearly', month: 7 },
+      { id: 'weekends', label: 'Week-ends / courts séjours', amount: 500, defaultFreq: 'yearly', month: 4 },
     ]
   },
   {
     id: 'gifts', label: '🎁 Cadeaux',
     questions: [
-      { id: 'christmas', label: 'Cadeaux de Noël ?', amount: 500, frequency: 'yearly', month: 12 },
-      { id: 'birthdays', label: 'Anniversaires (budget annuel) ?', amount: 300, frequency: 'yearly', month: 6 },
+      { id: 'christmas', label: 'Cadeaux de Noël', amount: 500, defaultFreq: 'yearly', month: 12 },
+      { id: 'birthdays', label: 'Anniversaires (budget annuel)', amount: 300, defaultFreq: 'yearly', month: 6 },
     ]
   },
 ]
@@ -193,6 +195,7 @@ export default function Wizard({ onComplete }) {
 function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
   const [enabled, setEnabled] = useState(false)
   const [amount, setAmount] = useState(question.amount)
+  const [frequency, setFrequency] = useState(question.defaultFreq)
   const [paymentMonth, setPaymentMonth] = useState(question.month || 1)
   const [allocMode, setAllocMode] = useState('prorata')
   const [sharingType, setSharingType] = useState('individual')
@@ -204,13 +207,13 @@ function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
 
   const handleAdd = () => {
     onAdd({
-      title: question.label.replace(' ?', ''),
+      title: question.label,
       category: 'other',
       kind: 'expense',
-      frequency: question.frequency,
+      frequency,
       amount,
-      paymentMonth: question.frequency === 'monthly' ? null : paymentMonth,
-      allocation_mode: question.frequency === 'monthly' ? null : allocMode,
+      paymentMonth: frequency === 'monthly' ? null : paymentMonth,
+      allocation_mode: frequency === 'monthly' ? null : allocMode,
       sharing_type: sharingType,
       my_share_percent: sharingType === 'common' ? sharePercent : 100,
       is_included_in_shared_transfer: sharingType === 'common' ? includedInTransfer : false,
@@ -240,13 +243,28 @@ function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
 
       {enabled && (
         <div className="question-details fade-in">
+          
+          {/* Choix fréquence */}
+          <div className="form-group">
+            <label>Fréquence</label>
+            <div className="frequency-selector">
+              <button type="button" className={`freq-btn ${frequency === 'monthly' ? 'active' : ''}`} onClick={() => setFrequency('monthly')}>
+                📅 Mensuel
+              </button>
+              <button type="button" className={`freq-btn ${frequency === 'yearly' ? 'active' : ''}`} onClick={() => setFrequency('yearly')}>
+                📆 Annuel
+              </button>
+            </div>
+          </div>
+
+          {/* Montant */}
           <div className="form-group">
             <label>Montant : <strong>{amount} €</strong></label>
             <input 
               type="range" 
               min="0" 
               max="5000" 
-              step={question.frequency === 'monthly' ? 10 : 50} 
+              step={frequency === 'monthly' ? 10 : 50} 
               value={amount} 
               onChange={e => setAmount(parseInt(e.target.value))} 
             />
@@ -259,7 +277,8 @@ function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
             />
           </div>
 
-          {question.frequency !== 'monthly' && (
+          {/* Options annuelles */}
+          {frequency === 'yearly' && (
             <>
               <div className="form-group">
                 <label>Mois de paiement</label>
@@ -283,6 +302,7 @@ function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
             </>
           )}
 
+          {/* Compte commun */}
           {hasShared && (
             <>
               <div className="form-group">
@@ -322,9 +342,14 @@ function QuestionCard({ question, hasShared, sharedTransfer, onAdd }) {
 function FreeAddCard({ categoryId, hasShared, sharedTransfer, onAdd }) {
   const [show, setShow] = useState(false)
   const [form, setForm] = useState({
-    title: '', amount: 0, frequency: 'monthly',
-    paymentMonth: 1, allocMode: 'prorata',
-    sharingType: 'individual', sharePercent: 50, includedInTransfer: false
+    title: '', 
+    amount: 0, 
+    frequency: 'monthly',
+    paymentMonth: 1, 
+    allocMode: 'prorata',
+    sharingType: 'individual', 
+    sharePercent: 50, 
+    includedInTransfer: false
   })
   const s = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
@@ -342,7 +367,16 @@ function FreeAddCard({ categoryId, hasShared, sharedTransfer, onAdd }) {
       is_included_in_shared_transfer: form.sharingType === 'common' ? form.includedInTransfer : false,
     })
     setShow(false)
-    setForm({ title: '', amount: 0, frequency: 'monthly', paymentMonth: 1, allocMode: 'prorata', sharingType: 'individual', sharePercent: 50, includedInTransfer: false })
+    setForm({ 
+      title: '', 
+      amount: 0, 
+      frequency: 'monthly', 
+      paymentMonth: 1, 
+      allocMode: 'prorata', 
+      sharingType: 'individual', 
+      sharePercent: 50, 
+      includedInTransfer: false 
+    })
   }
 
   if (!show) return (
@@ -355,23 +389,31 @@ function FreeAddCard({ categoryId, hasShared, sharedTransfer, onAdd }) {
   return (
     <div className="free-add-form card fade-in">
       <h3>Nouvelle dépense</h3>
+      
       <div className="form-group">
         <label>Titre</label>
         <input type="text" value={form.title} onChange={e => s('title', e.target.value)} placeholder="Ex: Abonnement magazine" />
       </div>
+
+      <div className="form-group">
+        <label>Fréquence</label>
+        <div className="frequency-selector">
+          <button type="button" className={`freq-btn ${form.frequency === 'monthly' ? 'active' : ''}`} onClick={() => s('frequency', 'monthly')}>
+            📅 Mensuel
+          </button>
+          <button type="button" className={`freq-btn ${form.frequency === 'yearly' ? 'active' : ''}`} onClick={() => s('frequency', 'yearly')}>
+            📆 Annuel
+          </button>
+        </div>
+      </div>
+
       <div className="form-group">
         <label>Montant : <strong>{form.amount} €</strong></label>
         <input type="range" min="0" max="5000" step="10" value={form.amount} onChange={e => s('amount', parseInt(e.target.value))} />
         <input type="number" className="amount-input-direct" value={form.amount} onChange={e => s('amount', parseInt(e.target.value) || 0)} placeholder="Ou saisir directement..." />
       </div>
-      <div className="form-group">
-        <label>Fréquence</label>
-        <select value={form.frequency} onChange={e => s('frequency', e.target.value)}>
-          <option value="monthly">Mensuel (tous les mois)</option>
-          <option value="yearly">Annuel (1 fois par an)</option>
-        </select>
-      </div>
-      {form.frequency !== 'monthly' && (
+
+      {form.frequency === 'yearly' && (
         <>
           <div className="form-group">
             <label>Mois de paiement</label>
@@ -392,6 +434,7 @@ function FreeAddCard({ categoryId, hasShared, sharedTransfer, onAdd }) {
           </div>
         </>
       )}
+
       {hasShared && (
         <>
           <div className="form-group">
@@ -417,6 +460,7 @@ function FreeAddCard({ categoryId, hasShared, sharedTransfer, onAdd }) {
           )}
         </>
       )}
+      
       <div className="form-actions">
         <button className="btn btn-secondary" onClick={() => setShow(false)}>Annuler</button>
         <button className="btn btn-primary" onClick={handleAdd} disabled={!form.title.trim() || form.amount <= 0}>Ajouter</button>

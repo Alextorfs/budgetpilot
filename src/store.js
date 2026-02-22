@@ -59,6 +59,9 @@ const useStore = create((set, get) => ({
         has_shared_account: data.hasSharedAccount,
         shared_monthly_transfer: data.sharedMonthlyTransfer,
         partner_monthly_transfer: data.partnerMonthlyTransfer || 0,
+        shared_savings_transfer: data.sharedSavingsTransfer || 0,
+        partner_shared_savings_transfer: data.partnerSharedSavingsTransfer || 0,
+        existing_shared_savings: data.existingSharedSavings || 0,
       }, { onConflict: 'user_id' })
       .select()
       .single()
@@ -108,6 +111,12 @@ const useStore = create((set, get) => ({
         sharing_type: item.sharing_type || 'individual',
         my_share_percent: item.my_share_percent || 100,
         is_included_in_shared_transfer: item.is_included_in_shared_transfer || false,
+        is_unplanned: item.is_unplanned || false,
+        unplanned_month: item.unplanned_month || null,
+        funded_from_savings: item.funded_from_savings || 0,
+        funded_from_free: item.funded_from_free || 0,
+        funded_from_shared_savings: item.funded_from_shared_savings || 0,
+        goes_to_savings: item.goes_to_savings || false,
         is_active: true
       })
       .select()
@@ -217,6 +226,8 @@ const useStore = create((set, get) => ({
         personal_provisions_amount: data.personal_provisions_amount,
         common_transfer_done: data.common_transfer_done,
         common_transfer_amount: data.common_transfer_amount,
+        shared_savings_done: data.shared_savings_done,
+        shared_savings_amount: data.shared_savings_amount,
       })
 
     if (error) throw error

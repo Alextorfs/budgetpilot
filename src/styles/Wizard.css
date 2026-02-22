@@ -347,3 +347,31 @@
   font-size: 1rem;
   margin-top: 0.5rem;
 }
+
+/* Sélecteurs fréquence */
+.frequency-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.freq-btn {
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.freq-btn:hover {
+  border-color: var(--primary);
+}
+
+.freq-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}

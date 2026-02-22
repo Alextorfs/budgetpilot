@@ -19,6 +19,9 @@ export default function Onboarding({ onComplete }) {
     hasSharedAccount: false,
     sharedMonthlyTransfer: 0,
     partnerMonthlyTransfer: 0,
+    sharedSavingsTransfer: 0,
+    partnerSharedSavingsTransfer: 0,
+    existingSharedSavings: 0,
   })
 
   const upd = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
@@ -43,6 +46,9 @@ export default function Onboarding({ onComplete }) {
           hasSharedAccount: form.hasSharedAccount,
           sharedMonthlyTransfer: form.sharedMonthlyTransfer,
           partnerMonthlyTransfer: form.partnerMonthlyTransfer,
+          sharedSavingsTransfer: form.sharedSavingsTransfer,
+          partnerSharedSavingsTransfer: form.partnerSharedSavingsTransfer,
+          existingSharedSavings: form.existingSharedSavings,
         })
         await createPlan({
           year: form.year,
@@ -69,7 +75,6 @@ export default function Onboarding({ onComplete }) {
 
         {error && <div style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
 
-        {/* Étape 0 : Prénom */}
         {step === 0 && (
           <div className="step fade-in">
             <div className="step-icon">👋</div>
@@ -82,7 +87,6 @@ export default function Onboarding({ onComplete }) {
           </div>
         )}
 
-        {/* Étape 1 : Période */}
         {step === 1 && (
           <div className="step fade-in">
             <div className="step-icon">📅</div>
@@ -102,12 +106,11 @@ export default function Onboarding({ onComplete }) {
           </div>
         )}
 
-        {/* Étape 2 : Épargne existante */}
         {step === 2 && (
           <div className="step fade-in">
             <div className="step-icon">🏦</div>
             <h2>As-tu déjà de l'épargne ?</h2>
-            <p className="step-subtitle">Montant disponible sur tes comptes d'épargne actuellement</p>
+            <p className="step-subtitle">Montant disponible sur tes comptes d'épargne personnels</p>
             <div className="amount-display">{form.existingSavings.toLocaleString('fr-FR')} €</div>
             <div className="form-group">
               <input type="range" min="0" max="50000" step="100" value={form.existingSavings} onChange={e => upd('existingSavings', parseInt(e.target.value))} />
@@ -116,7 +119,6 @@ export default function Onboarding({ onComplete }) {
           </div>
         )}
 
-        {/* Étape 3 : Salaire */}
         {step === 3 && (
           <div className="step fade-in">
             <div className="step-icon">💰</div>
@@ -129,12 +131,11 @@ export default function Onboarding({ onComplete }) {
           </div>
         )}
 
-        {/* Étape 4 : Épargne projet */}
         {step === 4 && (
           <div className="step fade-in">
             <div className="step-icon">🎯</div>
             <h2>Combien vires-tu sur ton épargne chaque mois ?</h2>
-            <p className="step-subtitle">C'est l'argent que tu mets de côté chaque mois pour tes futurs projets (vacances, voiture, travaux…). Ce n'est PAS ton budget loisirs mensuel.</p>
+            <p className="step-subtitle">C'est l'argent que tu mets de côté pour tes futurs projets (vacances, voiture, travaux…)</p>
             <div className="amount-display purple">{form.funSavingsTarget.toLocaleString('fr-FR')} €</div>
             {form.monthlySalary > 0 && (
               <div className="percentage-display">{Math.round((form.funSavingsTarget / form.monthlySalary) * 100)}% de ton salaire</div>
@@ -146,7 +147,6 @@ export default function Onboarding({ onComplete }) {
           </div>
         )}
 
-        {/* Étape 5 : Compte commun */}
         {step === 5 && (
           <div className="step fade-in">
             <div className="step-icon">👥</div>
@@ -164,25 +164,38 @@ export default function Onboarding({ onComplete }) {
             {form.hasSharedAccount && (
               <div className="shared-amount-section fade-in">
 
-                <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                  <label>💳 Ton virement mensuel sur ce compte</label>
+                <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', fontSize: '1.125rem' }}>🏠 Compte Commun (dépenses courantes)</h3>
+                <p className="help-text">Pour loyer, courses, électricité, etc.</p>
+
+                <div className="form-group">
+                  <label>💳 Ton virement mensuel</label>
                   <div className="amount-display orange">{form.sharedMonthlyTransfer.toLocaleString('fr-FR')} €</div>
                   <input type="range" min="0" max="3000" step="50" value={form.sharedMonthlyTransfer} onChange={e => upd('sharedMonthlyTransfer', parseInt(e.target.value))} />
                   <div className="range-labels"><span>0 €</span><span>3 000 €</span></div>
                 </div>
 
-                <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                  <label>💳 Virement mensuel de ton/ta partenaire</label>
-                  <p className="help-text">Pour calculer le total disponible sur le compte commun et détecter les manques</p>
+                <div className="form-group">
+                  <label>💳 Virement de ton/ta partenaire</label>
                   <div className="amount-display orange">{form.partnerMonthlyTransfer.toLocaleString('fr-FR')} €</div>
                   <input type="range" min="0" max="3000" step="50" value={form.partnerMonthlyTransfer} onChange={e => upd('partnerMonthlyTransfer', parseInt(e.target.value))} />
                   <div className="range-labels"><span>0 €</span><span>3 000 €</span></div>
                 </div>
 
                 <div className="total-common-preview">
-                  <span>Total mensuel sur le compte commun :</span>
+                  <span>Total mensuel compte commun :</span>
                   <strong>{(form.sharedMonthlyTransfer + form.partnerMonthlyTransfer).toLocaleString('fr-FR')} €</strong>
                 </div>
+
+                <h3 style={{ marginTop: '2rem', marginBottom: '1rem', fontSize: '1.125rem' }}>💰 Épargne Commune (provisions futures)</h3>
+                <p className="help-text">Pour assurance auto, charges copro, taxe foncière, etc.</p>
+
+                <div className="form-group">
+                  <label>Stock épargne commune actuel</label>
+                  <div className="amount-display">{form.existingSharedSavings.toLocaleString('fr-FR')} €</div>
+                  <input type="range" min="0" max="20000" step="100" value={form.existingSharedSavings} onChange={e => upd('existingSharedSavings', parseInt(e.target.value))} />
+                  <div className="range-labels"><span>0 €</span><span>20 000 €</span></div>
+                </div>
+
               </div>
             )}
           </div>

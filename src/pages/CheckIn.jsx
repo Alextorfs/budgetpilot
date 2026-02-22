@@ -16,12 +16,14 @@ export default function CheckIn({ onBack }) {
     personalProvisionsAmount: 0,
     commonTransferDone: null,
     commonTransferAmount: 0,
+    sharedSavingsDone: null,
+    sharedSavingsAmount: 0,
   })
 
   const hasShared = userProfile?.has_shared_account || false
   const funSavingsTarget = activePlan?.fun_savings_monthly_target || 0
+  const myTransfer = userProfile?.shared_monthly_transfer || 0
 
-  // Calcul provisions perso
   const computeProvision = (item) => {
     if (!item.payment_month || item.frequency === 'monthly') return 0
     if (currentMonth > item.payment_month) return 0
@@ -34,22 +36,36 @@ export default function CheckIn({ onBack }) {
     return myAmount / monthsLeft
   }
 
-  const provisionItems = items.filter(i => i.frequency !== 'monthly' && i.kind === 'expense' && i.payment_month >= currentMonth)
+  const provisionItems = items.filter(i => 
+    i.frequency !== 'monthly' && 
+    i.kind === 'expense' && 
+    i.payment_month >= currentMonth &&
+    !i.is_unplanned
+  )
+  
   const personalProvisionItems = provisionItems.filter(i => i.sharing_type === 'individual')
-  const commonProvisionItems = provisionItems.filter(i => i.sharing_type === 'common' && !i.is_included_in_shared_transfer)
-
   const personalProvisionsTarget = personalProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
-  const commonProvisionsTarget = commonProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
-  const commonTransferTarget = (userProfile?.shared_monthly_transfer || 0) + commonProvisionsTarget
+
+  const commonProvisionItems = provisionItems.filter(i => 
+    i.sharing_type === 'common' && 
+    !i.is_included_in_shared_transfer
+  )
+  const sharedSavingsTarget = commonProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
+
+  const unplannedItems = items.filter(i => 
+    i.is_unplanned && 
+    i.unplanned_month === currentMonth
+  )
 
   useEffect(() => {
     setForm(prev => ({
       ...prev,
       funSavingsAmount: funSavingsTarget,
       personalProvisionsAmount: personalProvisionsTarget,
-      commonTransferAmount: commonTransferTarget,
+      commonTransferAmount: myTransfer,
+      sharedSavingsAmount: sharedSavingsTarget,
     }))
-  }, [funSavingsTarget, personalProvisionsTarget, commonTransferTarget])
+  }, [funSavingsTarget, personalProvisionsTarget, myTransfer, sharedSavingsTarget])
 
   const handleSubmit = async () => {
     setSaving(true)
@@ -63,6 +79,8 @@ export default function CheckIn({ onBack }) {
         personal_provisions_amount: form.personalProvisionsDone ? form.personalProvisionsAmount : 0,
         common_transfer_done: form.commonTransferDone,
         common_transfer_amount: form.commonTransferDone ? form.commonTransferAmount : 0,
+        shared_savings_done: form.sharedSavingsDone,
+        shared_savings_amount: form.sharedSavingsDone ? form.sharedSavingsAmount : 0,
       })
       alert('✅ Check-in enregistré !')
       onBack()
@@ -75,7 +93,8 @@ export default function CheckIn({ onBack }) {
 
   const canSubmit = form.funSavingsDone !== null && 
     (personalProvisionsTarget === 0 || form.personalProvisionsDone !== null) &&
-    (!hasShared || form.commonTransferDone !== null)
+    (!hasShared || form.commonTransferDone !== null) &&
+    (sharedSavingsTarget === 0 || form.sharedSavingsDone !== null)
 
   return (
     <div className="checkin-page">
@@ -114,9 +133,9 @@ export default function CheckIn({ onBack }) {
             </button>
           </div>
 
-          {form.funSavingsDone === true && (
+          {form.funSavingsDone === false && (
             <div className="amount-adjust fade-in">
-              <label>Montant réellement viré :</label>
+              <label>Si tu as viré une partie, combien ?</label>
               <div className="amount-input-group">
                 <input 
                   type="number" 
@@ -130,7 +149,7 @@ export default function CheckIn({ onBack }) {
         </div>
 
         {/* Provisions perso */}
-        {personalProvisionsTarget > 0 && (
+        {personalProvisionItems.length > 0 && (
           <div className="checkin-card">
             <div className="checkin-question">
               <div className="question-icon">💰</div>
@@ -160,9 +179,9 @@ export default function CheckIn({ onBack }) {
               </button>
             </div>
 
-            {form.personalProvisionsDone === true && (
+            {form.personalProvisionsDone === false && (
               <div className="amount-adjust fade-in">
-                <label>Montant réellement mis de côté :</label>
+                <label>Si tu as mis une partie de côté, combien ?</label>
                 <div className="amount-input-group">
                   <input 
                     type="number" 
@@ -183,20 +202,14 @@ export default function CheckIn({ onBack }) {
               <div className="question-icon">🏠</div>
               <div className="question-content">
                 <h3>As-tu viré sur le compte commun ?</h3>
-                <p className="question-detail">Montant prévu : <strong>{fmt(commonTransferTarget)}</strong></p>
-                <div className="provision-list">
-                  <span className="provision-tag">Virement fixe • {fmt(userProfile.shared_monthly_transfer)}</span>
-                  {commonProvisionItems.map(item => (
-                    <span key={item.id} className="provision-tag">{item.title} • {fmt(computeProvision(item))}</span>
-                  ))}
-                </div>
+                <p className="question-detail">Montant prévu : <strong>{fmt(myTransfer)}</strong></p>
               </div>
             </div>
 
             <div className="answer-buttons">
               <button 
                 className={`answer-btn ${form.commonTransferDone === true ? 'active yes' : ''}`}
-                onClick={() => setForm(p => ({ ...p, commonTransferDone: true, commonTransferAmount: commonTransferTarget }))}
+                onClick={() => setForm(p => ({ ...p, commonTransferDone: true, commonTransferAmount: myTransfer }))}
               >
                 ✅ Oui
               </button>
@@ -208,9 +221,9 @@ export default function CheckIn({ onBack }) {
               </button>
             </div>
 
-            {form.commonTransferDone === true && (
+            {form.commonTransferDone === false && (
               <div className="amount-adjust fade-in">
-                <label>Montant réellement viré :</label>
+                <label>Si tu as viré une partie, combien ?</label>
                 <div className="amount-input-group">
                   <input 
                     type="number" 
@@ -221,6 +234,71 @@ export default function CheckIn({ onBack }) {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Épargne commune */}
+        {hasShared && commonProvisionItems.length > 0 && (
+          <div className="checkin-card">
+            <div className="checkin-question">
+              <div className="question-icon">💰</div>
+              <div className="question-content">
+                <h3>As-tu viré sur l'épargne commune ?</h3>
+                <p className="question-detail">Montant prévu : <strong>{fmt(sharedSavingsTarget)}</strong></p>
+                <div className="provision-list">
+                  {commonProvisionItems.map(item => (
+                    <span key={item.id} className="provision-tag">{item.title} • {fmt(computeProvision(item))}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="answer-buttons">
+              <button 
+                className={`answer-btn ${form.sharedSavingsDone === true ? 'active yes' : ''}`}
+                onClick={() => setForm(p => ({ ...p, sharedSavingsDone: true, sharedSavingsAmount: sharedSavingsTarget }))}
+              >
+                ✅ Oui
+              </button>
+              <button 
+                className={`answer-btn ${form.sharedSavingsDone === false ? 'active no' : ''}`}
+                onClick={() => setForm(p => ({ ...p, sharedSavingsDone: false, sharedSavingsAmount: 0 }))}
+              >
+                ❌ Non
+              </button>
+            </div>
+
+            {form.sharedSavingsDone === false && (
+              <div className="amount-adjust fade-in">
+                <label>Si tu as viré une partie, combien ?</label>
+                <div className="amount-input-group">
+                  <input 
+                    type="number" 
+                    value={form.sharedSavingsAmount} 
+                    onChange={e => setForm(p => ({ ...p, sharedSavingsAmount: parseFloat(e.target.value) || 0 }))}
+                  />
+                  <span>€</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Info dépenses imprévues */}
+        {unplannedItems.length > 0 && (
+          <div className="checkin-info-box">
+            <strong>💡 Dépenses imprévues ce mois-ci :</strong>
+            {unplannedItems.map(item => (
+              <div key={item.id} style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                • {item.title} : {fmt(item.amount)}
+                {item.funded_from_savings > 0 && ` (${fmt(item.funded_from_savings)} épargne projet)`}
+                {item.funded_from_free > 0 && ` (${fmt(item.funded_from_free)} argent libre)`}
+                {item.funded_from_shared_savings > 0 && ` (${fmt(item.funded_from_shared_savings)} épargne commune)`}
+              </div>
+            ))}
+            <div style={{ marginTop: '0.5rem', fontStyle: 'italic', fontSize: '0.8125rem', color: '#6B7280' }}>
+              → Déjà déduit, aucune action requise
+            </div>
           </div>
         )}
 

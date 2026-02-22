@@ -35,21 +35,56 @@ export default function Dashboard({ onLogout }) {
   const totalCommonTransfer = myTransfer + partnerTransfer
   const hasShared = userProfile.has_shared_account || false
   const existingSavings = userProfile.existing_savings || 0
+  const existingSharedSavings = userProfile.existing_shared_savings || 0
 
+  // ══════════════════════════════════════════════════════════════════════
+  // REVENUS EXCEPTIONNELS ce mois
+  // ══════════════════════════════════════════════════════════════════════
+  const bonusItems = items.filter(i => 
+    i.kind === 'income' && 
+    i.frequency === 'yearly' && 
+    i.payment_month === currentMonth
+  )
+  const bonusToSavings = bonusItems.filter(i => i.goes_to_savings).reduce((s, i) => s + i.amount, 0)
+  const bonusToFree = bonusItems.filter(i => !i.goes_to_savings).reduce((s, i) => s + i.amount, 0)
+
+  // ══════════════════════════════════════════════════════════════════════
+  // DÉPENSES IMPRÉVUES ce mois
+  // ══════════════════════════════════════════════════════════════════════
+  const unplannedItems = items.filter(i => 
+    i.is_unplanned && 
+    i.unplanned_month === currentMonth
+  )
+  const unplannedFromSavings = unplannedItems.reduce((s, i) => s + (i.funded_from_savings || 0), 0)
+  const unplannedFromFree = unplannedItems.reduce((s, i) => s + (i.funded_from_free || 0), 0)
+  const unplannedFromSharedSavings = unplannedItems.reduce((s, i) => s + (i.funded_from_shared_savings || 0), 0)
+
+  // ══════════════════════════════════════════════════════════════════════
+  // DÉPENSES MENSUELLES PERSO
+  // ══════════════════════════════════════════════════════════════════════
   const personalMonthlyExpenses = items
-    .filter(i => i.frequency === 'monthly' && i.sharing_type === 'individual' && i.kind === 'expense')
+    .filter(i => i.frequency === 'monthly' && i.sharing_type === 'individual' && i.kind === 'expense' && !i.is_unplanned)
     .reduce((s, i) => s + i.amount, 0)
 
+  // ══════════════════════════════════════════════════════════════════════
+  // COMPTE COMMUN : Dépenses mensuelles INCLUSES dans virement
+  // ══════════════════════════════════════════════════════════════════════
   const commonMonthlyIncluded = items
-    .filter(i => i.frequency === 'monthly' && i.sharing_type === 'common' && i.is_included_in_shared_transfer && i.kind === 'expense')
+    .filter(i => 
+      i.frequency === 'monthly' && 
+      i.sharing_type === 'common' && 
+      i.is_included_in_shared_transfer && 
+      i.kind === 'expense' &&
+      !i.is_unplanned
+    )
     .reduce((s, i) => s + i.amount, 0)
 
-  const commonMonthlyNotIncluded = items
-    .filter(i => i.frequency === 'monthly' && i.sharing_type === 'common' && !i.is_included_in_shared_transfer && i.kind === 'expense')
-    .reduce((s, i) => s + i.amount, 0)
+  const commonBalanceMonthly = totalCommonTransfer - commonMonthlyIncluded
+  const hasShortfallMonthly = commonBalanceMonthly < 0
 
-  const totalCommonMonthly = commonMonthlyIncluded + commonMonthlyNotIncluded
-
+  // ══════════════════════════════════════════════════════════════════════
+  // PROVISIONS
+  // ══════════════════════════════════════════════════════════════════════
   const computeProvision = (item) => {
     if (!item.payment_month || item.frequency === 'monthly') return 0
     if (currentMonth > item.payment_month) return 0
@@ -70,27 +105,32 @@ export default function Dashboard({ onLogout }) {
     return Math.min(100, Math.round((doneMonths / totalMonths) * 100))
   }
 
-  const provisionItems = items.filter(i => i.frequency !== 'monthly' && i.kind === 'expense' && i.payment_month >= currentMonth)
+  const provisionItems = items.filter(i => 
+    i.frequency !== 'monthly' && 
+    i.kind === 'expense' && 
+    i.payment_month >= currentMonth &&
+    !i.is_unplanned
+  )
+  
   const personalProvisionItems = provisionItems.filter(i => i.sharing_type === 'individual')
-  const commonProvisionItems = provisionItems.filter(i => i.sharing_type === 'common' && !i.is_included_in_shared_transfer)
-
   const personalProvisions = personalProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
+
+  // ÉPARGNE COMMUNE : Provisions NON incluses dans virement mensuel
+  const commonProvisionItems = provisionItems.filter(i => 
+    i.sharing_type === 'common' && 
+    !i.is_included_in_shared_transfer
+  )
   const commonProvisions = commonProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
 
-  const commonProvisionTotal = commonProvisionItems.reduce((s, i) => {
-    if (!i.payment_month || currentMonth > i.payment_month) return s
-    const totalAmount = i.amount
-    if (i.allocation_mode === 'spread') return s + (totalAmount / 12)
-    const monthsLeft = i.payment_month - currentMonth
-    return s + (totalAmount / Math.max(monthsLeft, 1))
-  }, 0)
+  // ══════════════════════════════════════════════════════════════════════
+  // TOTAUX
+  // ══════════════════════════════════════════════════════════════════════
+  const totalToSavePersonal = personalProvisions + funSavings
+  const totalToSaveShared = hasShared ? commonProvisions : 0
+  const totalToSave = totalToSavePersonal + (hasShared ? myTransfer : 0) + totalToSaveShared
 
-  const totalCommonExpenses = totalCommonMonthly + commonProvisionTotal
-  const commonBalance = totalCommonTransfer - totalCommonExpenses
-  const hasShortfall = commonBalance < 0
-
-  const totalToSave = personalProvisions + funSavings + (hasShared ? myTransfer + commonProvisions : 0)
-  const freeMoney = salary - personalMonthlyExpenses - totalToSave
+  // Argent libre = Salaire - dépenses mensuelles perso - épargne perso - virement commun - dépenses imprévues (free) + bonus (free)
+  const freeMoney = salary - personalMonthlyExpenses - totalToSavePersonal - (hasShared ? myTransfer : 0) - unplannedFromFree + bonusToFree
 
   const pct = salary > 0 ? (freeMoney / salary) * 100 : 0
   const status = pct < 10
@@ -98,12 +138,18 @@ export default function Dashboard({ onLogout }) {
     : pct < 20 ? { label: '✓ Budget équilibré', cls: 'balanced' }
     : { label: '🌿 Budget confortable', cls: 'comfortable' }
 
+  // Projection épargne projet : stock + virements mensuels restants + bonus - dépenses imprévues
   const monthsLeft = 12 - currentMonth + 1
-  const projected = existingSavings + funSavings * monthsLeft
+  const projectedSavings = existingSavings + (funSavings * monthsLeft) + bonusToSavings - unplannedFromSavings
+
+  // Projection épargne commune
+  const projectedSharedSavings = existingSharedSavings + (commonProvisions * monthsLeft) - unplannedFromSharedSavings
 
   return (
     <div className="dashboard">
       <div className="dashboard-container">
+        
+        {/* Header */}
         <div className="dashboard-header">
           <div>
             <h1>Bonjour {userProfile.first_name} 👋</h1>
@@ -118,33 +164,79 @@ export default function Dashboard({ onLogout }) {
           </div>
         </div>
 
-        {/* Bouton Check-in */}
+        {/* Check-in button */}
         <button className="btn btn-primary btn-lg checkin-btn" onClick={() => setShowCheckIn(true)} style={{ marginBottom: 'var(--spacing-lg)' }}>
           📝 Check-in de {MONTHS[currentMonth - 1]}
         </button>
 
+        {/* Alertes dépenses imprévues */}
+        {unplannedItems.length > 0 && (
+          <div className="alert alert-info" style={{ marginBottom: 'var(--spacing-lg)' }}>
+            <strong>💡 Dépenses imprévues ce mois-ci :</strong>
+            {unplannedItems.map(item => (
+              <div key={item.id} style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                • {item.title} : {fmt(item.amount)}
+                {item.funded_from_savings > 0 && ` (${fmt(item.funded_from_savings)} épargne projet)`}
+                {item.funded_from_free > 0 && ` (${fmt(item.funded_from_free)} argent libre)`}
+                {item.funded_from_shared_savings > 0 && ` (${fmt(item.funded_from_shared_savings)} épargne commune)`}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Alertes revenus exceptionnels */}
+        {bonusItems.length > 0 && (
+          <div className="alert alert-success" style={{ marginBottom: 'var(--spacing-lg)' }}>
+            <strong>🎁 Revenus exceptionnels ce mois-ci :</strong>
+            {bonusItems.map(item => (
+              <div key={item.id} style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                • {item.title} : +{fmt(item.amount)}
+                {item.goes_to_savings ? ' → épargne projet' : ' → argent libre'}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Projection épargne projet */}
         <div className="projection-card">
           <div className="projection-icon">🎯</div>
           <div className="projection-content">
             <h3>Projection épargne projet fin {activePlan.year}</h3>
             <p>En virant {fmt(funSavings)}/mois sur ton compte épargne :</p>
-            <div className="projection-amount">{fmt(projected)}</div>
+            <div className="projection-amount">{fmt(projectedSavings)}</div>
             <p className="projection-detail">
-              <small>{monthsLeft} mois × {fmt(funSavings)} + {fmt(existingSavings)} déjà épargnés</small>
+              <small>
+                {monthsLeft} mois × {fmt(funSavings)} + {fmt(existingSavings)} stock
+                {bonusToSavings > 0 && ` + ${fmt(bonusToSavings)} bonus`}
+                {unplannedFromSavings > 0 && ` - ${fmt(unplannedFromSavings)} dépenses imprévues`}
+              </small>
             </p>
           </div>
         </div>
 
+        {/* Zone perso */}
         <div className="budget-zone personal-zone">
           <h2>💰 Mon Budget Personnel</h2>
           <div className="info-row">
             <span className="info-label">Salaire net</span>
             <span className="info-value green">{fmt(salary)}</span>
           </div>
+          {bonusToFree > 0 && (
+            <div className="info-row">
+              <span className="info-label">+ Revenus exceptionnels</span>
+              <span className="info-value green">+{fmt(bonusToFree)}</span>
+            </div>
+          )}
           <div className="info-row">
             <span className="info-label">Dépenses mensuelles perso</span>
             <span className="info-value">{fmt(personalMonthlyExpenses)}</span>
           </div>
+          {unplannedFromFree > 0 && (
+            <div className="info-row">
+              <span className="info-label">Dépenses imprévues (argent libre)</span>
+              <span className="info-value">{fmt(unplannedFromFree)}</span>
+            </div>
+          )}
           <div className="info-row">
             <span className="info-label">Provisions échéances futures</span>
             <span className="info-value">{fmt(personalProvisions)}</span>
@@ -156,7 +248,7 @@ export default function Dashboard({ onLogout }) {
           {hasShared && (
             <div className="info-row">
               <span className="info-label">Virement compte commun</span>
-              <span className="info-value orange">{fmt(myTransfer + commonProvisions)}</span>
+              <span className="info-value orange">{fmt(myTransfer)}</span>
             </div>
           )}
           <div className="divider"></div>
@@ -170,7 +262,7 @@ export default function Dashboard({ onLogout }) {
           </div>
         </div>
 
-        {/* NOUVEAU : Détail des virements à faire ce mois-ci */}
+        {/* Détail des virements */}
         <div className="transfer-detail-card">
           <h3>📊 Détail des virements de {MONTHS[currentMonth - 1]}</h3>
           
@@ -208,29 +300,40 @@ export default function Dashboard({ onLogout }) {
           )}
 
           {hasShared && (
-            <div className="transfer-section">
-              <div className="transfer-header">
-                <span className="transfer-icon">🏠</span>
-                <h4>Compte commun</h4>
+            <>
+              <div className="transfer-section">
+                <div className="transfer-header">
+                  <span className="transfer-icon">🏠</span>
+                  <h4>Compte commun (dépenses courantes)</h4>
+                </div>
+                <div className="transfer-item">
+                  <span>Virement mensuel fixe</span>
+                  <strong className="transfer-amount orange">{fmt(myTransfer)}</strong>
+                </div>
               </div>
-              <div className="transfer-item">
-                <span>Virement mensuel fixe</span>
-                <strong className="transfer-amount orange">{fmt(myTransfer)}</strong>
-              </div>
-              {commonProvisionItems.map(item => {
-                const provision = computeProvision(item)
-                return (
-                  <div key={item.id} className="transfer-item">
-                    <span>{item.title} (👥 {item.my_share_percent}%) — {MONTHS[item.payment_month - 1]}</span>
-                    <strong className="transfer-amount">{fmt(provision)}</strong>
+
+              {commonProvisionItems.length > 0 && (
+                <div className="transfer-section">
+                  <div className="transfer-header">
+                    <span className="transfer-icon">💰</span>
+                    <h4>Épargne commune (provisions futures)</h4>
                   </div>
-                )
-              })}
-              <div className="transfer-total">
-                <span>Total compte commun</span>
-                <strong>{fmt(myTransfer + commonProvisions)}</strong>
-              </div>
-            </div>
+                  {commonProvisionItems.map(item => {
+                    const provision = computeProvision(item)
+                    return (
+                      <div key={item.id} className="transfer-item">
+                        <span>{item.title} (👥 {item.my_share_percent}%) — {MONTHS[item.payment_month - 1]}</span>
+                        <strong className="transfer-amount">{fmt(provision)}</strong>
+                      </div>
+                    )
+                  })}
+                  <div className="transfer-total">
+                    <span>Total épargne commune</span>
+                    <strong>{fmt(commonProvisions)}</strong>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="transfer-grand-total">
@@ -239,6 +342,7 @@ export default function Dashboard({ onLogout }) {
           </div>
         </div>
 
+        {/* Provisions détail */}
         {provisionItems.length > 0 && (
           <div className="provisions-detail">
             <h3>📋 Ce que tu mets de côté ce mois-ci</h3>
@@ -286,9 +390,11 @@ export default function Dashboard({ onLogout }) {
           </div>
         )}
 
+        {/* Compte commun */}
         {hasShared && (
           <div className="budget-zone common-zone">
-            <h2>🏠 Compte Commun</h2>
+            <h2>🏠 Compte Commun (dépenses courantes)</h2>
+            <p className="zone-subtitle">Loyer, courses, électricité...</p>
             <div className="info-row">
               <span className="info-label">Ton virement</span>
               <span className="info-value">{fmt(myTransfer)}</span>
@@ -298,25 +404,21 @@ export default function Dashboard({ onLogout }) {
               <span className="info-value">{fmt(partnerTransfer)}</span>
             </div>
             <div className="info-row" style={{ borderTop: '2px solid #E5E7EB', paddingTop: '0.75rem' }}>
-              <span className="info-label" style={{ fontWeight: 700 }}>Total disponible sur le compte</span>
+              <span className="info-label" style={{ fontWeight: 700 }}>Total disponible</span>
               <span className="info-value green" style={{ fontWeight: 700 }}>{fmt(totalCommonTransfer)}</span>
             </div>
             <div className="divider"></div>
             <div className="info-row">
-              <span className="info-label">Dépenses communes mensuelles</span>
-              <span className="info-value">{fmt(totalCommonMonthly)}</span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">Provisions communes (total couple)</span>
-              <span className="info-value">{fmt(commonProvisionTotal)}</span>
+              <span className="info-label">Dépenses mensuelles incluses</span>
+              <span className="info-value">{fmt(commonMonthlyIncluded)}</span>
             </div>
 
-            {hasShortfall ? (
+            {hasShortfallMonthly ? (
               <div className="common-balance-card danger">
                 <div className="balance-icon">⚠️</div>
                 <div>
-                  <strong>Manque de {fmt(Math.abs(commonBalance))} sur le compte commun !</strong>
-                  <p>Les dépenses communes ({fmt(totalCommonExpenses)}) dépassent les virements ({fmt(totalCommonTransfer)}).</p>
+                  <strong>Manque de {fmt(Math.abs(commonBalanceMonthly))} !</strong>
+                  <p>Les dépenses mensuelles ({fmt(commonMonthlyIncluded)}) dépassent les virements ({fmt(totalCommonTransfer)}).</p>
                 </div>
               </div>
             ) : (
@@ -324,15 +426,50 @@ export default function Dashboard({ onLogout }) {
                 <div className="balance-icon">✅</div>
                 <div>
                   <strong>Compte commun équilibré</strong>
-                  <p>Solde estimé après dépenses : <strong>{fmt(commonBalance)}</strong></p>
+                  <p>Solde après dépenses : <strong>{fmt(commonBalanceMonthly)}</strong></p>
                 </div>
               </div>
             )}
           </div>
         )}
 
+        {/* Épargne commune */}
+        {hasShared && commonProvisionItems.length > 0 && (
+          <div className="budget-zone shared-savings-zone">
+            <h2>💰 Épargne Commune (provisions futures)</h2>
+            <p className="zone-subtitle">Assurance, charges copro, taxe foncière...</p>
+            
+            <div className="info-row">
+              <span className="info-label">Stock épargne commune actuel</span>
+              <span className="info-value purple">{fmt(existingSharedSavings)}</span>
+            </div>
+
+            <div className="divider"></div>
+            <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>Provisions ce mois :</h4>
+            {commonProvisionItems.map(item => {
+              const provision = computeProvision(item)
+              return (
+                <div key={item.id} className="info-row" style={{ fontSize: '0.875rem' }}>
+                  <span className="info-label">{item.title} ({item.my_share_percent}%)</span>
+                  <span className="info-value">{fmt(provision)}</span>
+                </div>
+              )
+            })}
+            <div className="info-row" style={{ borderTop: '1px solid #E5E7EB', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+              <span className="info-label" style={{ fontWeight: 600 }}>Total à virer</span>
+              <span className="info-value" style={{ fontWeight: 700 }}>{fmt(commonProvisions)}</span>
+            </div>
+
+            <div className="projection-mini" style={{ marginTop: '1rem', padding: '0.75rem', background: '#F9FAFB', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.8125rem', color: '#6B7280', marginBottom: '0.25rem' }}>Projection fin {activePlan.year}</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#7C3AED' }}>{fmt(projectedSharedSavings)}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Stocks épargne */}
         <div className="savings-stock-card">
-          <div className="stock-label">🏦 Épargne existante (stock)</div>
+          <div className="stock-label">🏦 Épargne projet (stock)</div>
           <div className="stock-amount">{fmt(existingSavings)}</div>
         </div>
 
@@ -344,7 +481,7 @@ export default function Dashboard({ onLogout }) {
           <div className="quick-expenses-preview">
             <h3>Aperçu de mes dépenses</h3>
             <div className="expenses-grid">
-              {items.slice(0, 6).map(item => {
+              {items.filter(i => i.kind === 'expense' && !i.is_unplanned).slice(0, 6).map(item => {
                 const myAmount = item.sharing_type === 'common'
                   ? item.amount * ((item.my_share_percent || 100) / 100)
                   : item.amount
@@ -359,9 +496,9 @@ export default function Dashboard({ onLogout }) {
                 )
               })}
             </div>
-            {items.length > 6 && (
+            {items.filter(i => i.kind === 'expense').length > 6 && (
               <button className="btn btn-outline" onClick={() => setShowManage(true)} style={{ marginTop: '1rem' }}>
-                Voir les {items.length} dépenses →
+                Voir toutes les dépenses →
               </button>
             )}
           </div>
