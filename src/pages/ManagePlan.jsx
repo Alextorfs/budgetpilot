@@ -9,6 +9,7 @@ export default function ManagePlan({ onBack }) {
   const { items, activePlan, userProfile, addItem, updateItem, deleteItem } = useStore()
   const [filter, setFilter] = useState('all')
   const [showUnplannedModal, setShowUnplannedModal] = useState(false)
+  const [showNormalModal, setShowNormalModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
 
   const expenses = items.filter(i => i.kind === 'expense')
@@ -62,7 +63,10 @@ export default function ManagePlan({ onBack }) {
         </div>
 
         <div className="action-buttons">
-          <button className="btn btn-primary" onClick={() => setShowUnplannedModal(true)}>
+          <button className="btn btn-primary" onClick={() => setShowNormalModal(true)}>
+            + Nouvelle dépense
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowUnplannedModal(true)}>
             ⚡ Dépense imprévue
           </button>
         </div>
@@ -165,6 +169,15 @@ export default function ManagePlan({ onBack }) {
         )}
 
       </div>
+
+      {showNormalModal && (
+        <NormalExpenseModal 
+          onClose={() => setShowNormalModal(false)}
+          activePlan={activePlan}
+          userProfile={userProfile}
+          addItem={addItem}
+        />
+      )}
 
       {showUnplannedModal && (
         <UnplannedExpenseModal 
@@ -269,6 +282,26 @@ function UnplannedExpenseModal({ onClose, activePlan, userProfile, addItem }) {
         funded_from_free: form.fundingFree,
         funded_from_shared_savings: form.fundingSharedSavings,
       })
+      
+      // Mise à jour automatique des stocks
+      const updates = {}
+      
+      // Si financé par épargne projet
+      if (form.fundingSavings > 0) {
+        updates.existing_savings = (userProfile.existing_savings || 0) - form.fundingSavings
+      }
+      
+      // Si financé par épargne commune
+      if (form.fundingSharedSavings > 0) {
+        updates.existing_shared_savings = (userProfile.existing_shared_savings || 0) - form.fundingSharedSavings
+      }
+      
+      // Appliquer les mises à jour
+      if (Object.keys(updates).length > 0) {
+        const { updateProfile } = useStore.getState()
+        await updateProfile(updates)
+      }
+      
       onClose()
     } catch (e) {
       alert('Erreur : ' + e.message)
@@ -418,6 +451,203 @@ function UnplannedExpenseModal({ onClose, activePlan, userProfile, addItem }) {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Annuler</button>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleSubmit} 
+            disabled={!isValid || saving}
+          >
+            {saving ? 'Ajout...' : 'Ajouter cette dépense'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NormalExpenseModal({ onClose, userProfile, addItem }) {
+  const [form, setForm] = useState({
+    title: '',
+    amount: 0,
+    frequency: 'monthly',
+    paymentMonth: new Date().getMonth() + 1,
+    allocMode: 'prorata',
+    sharingType: 'individual',
+    sharePercent: 50,
+    includedInTransfer: false,
+  })
+  const [saving, setSaving] = useState(false)
+
+  const hasShared = userProfile?.has_shared_account || false
+  const isValid = form.title.trim() && form.amount > 0
+
+  const handleSubmit = async () => {
+    if (!isValid) return
+    setSaving(true)
+    try {
+      await addItem({
+        title: form.title,
+        category: 'other',
+        kind: 'expense',
+        frequency: form.frequency,
+        amount: form.amount,
+        payment_month: form.frequency === 'monthly' ? null : form.paymentMonth,
+        allocation_mode: form.frequency === 'monthly' ? null : form.allocMode,
+        sharing_type: form.sharingType,
+        my_share_percent: form.sharingType === 'common' ? form.sharePercent : 100,
+        is_included_in_shared_transfer: form.sharingType === 'common' ? form.includedInTransfer : false,
+      })
+      onClose()
+    } catch (e) {
+      alert('Erreur : ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>+ Nouvelle dépense</h2>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Titre</label>
+            <input 
+              type="text" 
+              value={form.title} 
+              onChange={e => setForm(p => ({...p, title: e.target.value}))}
+              placeholder="Ex: Netflix, Loyer..."
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Fréquence</label>
+            <div className="funding-buttons">
+              <button 
+                type="button" 
+                className={`funding-btn ${form.frequency === 'monthly' ? 'active' : ''}`}
+                onClick={() => setForm(p => ({...p, frequency: 'monthly'}))}
+              >
+                📅 Mensuel
+              </button>
+              <button 
+                type="button" 
+                className={`funding-btn ${form.frequency === 'yearly' ? 'active' : ''}`}
+                onClick={() => setForm(p => ({...p, frequency: 'yearly'}))}
+              >
+                📆 Annuel
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Montant : <strong>{form.amount.toLocaleString('fr-FR')} €</strong></label>
+            <input 
+              type="range" 
+              min="0" 
+              max="5000" 
+              step="10" 
+              value={form.amount} 
+              onChange={e => setForm(p => ({...p, amount: parseInt(e.target.value)}))}
+            />
+            <input 
+              type="number" 
+              className="amount-input-direct" 
+              value={form.amount} 
+              onChange={e => setForm(p => ({...p, amount: parseInt(e.target.value) || 0}))}
+            />
+          </div>
+
+          {form.frequency === 'yearly' && (
+            <>
+              <div className="form-group">
+                <label>Mois de paiement</label>
+                <select value={form.paymentMonth} onChange={e => setForm(p => ({...p, paymentMonth: parseInt(e.target.value)}))}>
+                  {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Mode de provision</label>
+                <div className="funding-buttons">
+                  <button 
+                    type="button" 
+                    className={`funding-btn ${form.allocMode === 'prorata' ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({...p, allocMode: 'prorata'}))}
+                  >
+                    Prorata (mois restants)
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`funding-btn ${form.allocMode === 'spread' ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({...p, allocMode: 'spread'}))}
+                  >
+                    Lissé (toute l'année)
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {hasShared && (
+            <>
+              <div className="form-group">
+                <label>Type de dépense</label>
+                <div className="funding-buttons">
+                  <button 
+                    type="button" 
+                    className={`funding-btn ${form.sharingType === 'individual' ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({...p, sharingType: 'individual'}))}
+                  >
+                    👤 Personnelle
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`funding-btn ${form.sharingType === 'common' ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({...p, sharingType: 'common'}))}
+                  >
+                    👥 Commune
+                  </button>
+                </div>
+              </div>
+
+              {form.sharingType === 'common' && (
+                <>
+                  <div className="form-group">
+                    <label>Ta part : <strong>{form.sharePercent}%</strong></label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      step="10" 
+                      value={form.sharePercent} 
+                      onChange={e => setForm(p => ({...p, sharePercent: parseInt(e.target.value)}))}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={form.includedInTransfer} 
+                        onChange={e => setForm(p => ({...p, includedInTransfer: e.target.checked}))}
+                        style={{ width: 'auto' }}
+                      />
+                      Inclus dans le virement compte commun
+                    </label>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         <div className="modal-footer">

@@ -211,7 +211,7 @@ const useStore = create((set, get) => ({
   },
 
   createCheckIn: async (data) => {
-    const { activePlan } = get()
+    const { activePlan, userProfile } = get()
     if (!activePlan) return
 
     const { error } = await supabase
@@ -231,6 +231,24 @@ const useStore = create((set, get) => ({
       })
 
     if (error) throw error
+
+    // Mise à jour automatique des stocks d'épargne
+    const updates = {}
+    
+    // Épargne projet
+    if (data.fun_savings_done && data.fun_savings_amount > 0) {
+      updates.existing_savings = (userProfile.existing_savings || 0) + data.fun_savings_amount
+    }
+    
+    // Épargne commune
+    if (data.shared_savings_done && data.shared_savings_amount > 0) {
+      updates.existing_shared_savings = (userProfile.existing_shared_savings || 0) + data.shared_savings_amount
+    }
+
+    // Appliquer les mises à jour si nécessaire
+    if (Object.keys(updates).length > 0) {
+      await get().updateProfile(updates)
+    }
   },
 
   reset: () => set({

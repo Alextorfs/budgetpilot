@@ -59,6 +59,15 @@ export default function Dashboard({ onLogout }) {
   const unplannedFromFree = unplannedItems.reduce((s, i) => s + (i.funded_from_free || 0), 0)
   const unplannedFromSharedSavings = unplannedItems.reduce((s, i) => s + (i.funded_from_shared_savings || 0), 0)
 
+  // Dépenses imprévues COMMUNES pour calcul estimation
+  const unplannedCommon = unplannedItems.filter(i => i.sharing_type === 'common')
+  const partnerUnplannedFromShared = unplannedCommon.reduce((s, i) => {
+    const totalAmount = i.amount
+    const mySharePercent = i.my_share_percent || 100
+    const partnerPart = totalAmount * ((100 - mySharePercent) / 100)
+    return s + partnerPart
+  }, 0)
+
   // ══════════════════════════════════════════════════════════════════════
   // DÉPENSES MENSUELLES PERSO
   // ══════════════════════════════════════════════════════════════════════
@@ -87,11 +96,16 @@ export default function Dashboard({ onLogout }) {
   // ══════════════════════════════════════════════════════════════════════
   const computeProvision = (item) => {
     if (!item.payment_month || item.frequency === 'monthly') return 0
-    if (currentMonth > item.payment_month) return 0
+    
     const myAmount = item.sharing_type === 'common'
       ? item.amount * ((item.my_share_percent || 100) / 100)
       : item.amount
+    
+    // LISSÉ : provision constante toute l'année (continue après paiement)
     if (item.allocation_mode === 'spread') return myAmount / 12
+    
+    // PRORATA : provision selon mois restants (arrête après paiement)
+    if (currentMonth > item.payment_month) return 0
     const monthsLeft = item.payment_month - currentMonth
     if (monthsLeft <= 0) return myAmount
     return myAmount / monthsLeft
@@ -105,12 +119,13 @@ export default function Dashboard({ onLogout }) {
     return Math.min(100, Math.round((doneMonths / totalMonths) * 100))
   }
 
-  const provisionItems = items.filter(i => 
-    i.frequency !== 'monthly' && 
-    i.kind === 'expense' && 
-    i.payment_month >= currentMonth &&
-    !i.is_unplanned
-  )
+  const provisionItems = items.filter(i => {
+    if (i.frequency === 'monthly' || i.kind !== 'expense' || i.is_unplanned) return false
+    // Mode LISSÉ : apparaît toute l'année
+    if (i.allocation_mode === 'spread') return true
+    // Mode PRORATA : seulement avant/pendant le mois de paiement
+    return i.payment_month >= currentMonth
+  })
   
   const personalProvisionItems = provisionItems.filter(i => i.sharing_type === 'individual')
   const personalProvisions = personalProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
@@ -144,6 +159,13 @@ export default function Dashboard({ onLogout }) {
 
   // Projection épargne commune
   const projectedSharedSavings = existingSharedSavings + (commonProvisions * monthsLeft) - unplannedFromSharedSavings
+
+  // Estimation totale épargne commune (basée sur moyenne des %)
+  const avgSharedPercent = commonProvisionItems.length > 0
+    ? commonProvisionItems.reduce((s, i) => s + (i.my_share_percent || 50), 0) / commonProvisionItems.length
+    : 50
+  const estimatedTotalSharedSavings = (existingSharedSavings / avgSharedPercent) * 100
+  const estimatedAfterUnplanned = estimatedTotalSharedSavings - unplannedFromSharedSavings - partnerUnplannedFromShared
 
   return (
     <div className="dashboard">
@@ -440,9 +462,29 @@ export default function Dashboard({ onLogout }) {
             <p className="zone-subtitle">Assurance, charges copro, taxe foncière...</p>
             
             <div className="info-row">
-              <span className="info-label">Stock épargne commune actuel</span>
+              <span className="info-label">Stock épargne commune (ta part)</span>
               <span className="info-value purple">{fmt(existingSharedSavings)}</span>
             </div>
+
+            <div className="info-row" style={{ fontSize: '0.875rem', color: '#6B7280', fontStyle: 'italic' }}>
+              <span className="info-label">Estimation totale</span>
+              <span className="info-value">{fmt(estimatedTotalSharedSavings)}</span>
+            </div>
+
+            {(unplannedFromSharedSavings > 0 || partnerUnplannedFromShared > 0) && (
+              <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: '#FEF3C7', borderRadius: '0.375rem', fontSize: '0.8125rem' }}>
+                <strong>💡 Dépense(s) imprévue(s) ce mois :</strong>
+                <div style={{ marginTop: '0.25rem' }}>
+                  • Toi : {fmt(unplannedFromSharedSavings)} prélevé
+                  {partnerUnplannedFromShared > 0 && (
+                    <div>• Partenaire : ~{fmt(partnerUnplannedFromShared)} (estimé)</div>
+                  )}
+                  <div style={{ marginTop: '0.25rem', fontWeight: 600 }}>
+                    → Estimation après dépenses : {fmt(estimatedAfterUnplanned)}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="divider"></div>
             <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.5rem' }}>Provisions ce mois :</h4>
