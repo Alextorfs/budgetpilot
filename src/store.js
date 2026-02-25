@@ -41,6 +41,9 @@ const useStore = create((set, get) => ({
 
       set({ items: items || [] })
 
+      // Charger les provision stocks
+      await get().loadProvisionStocks()
+
     } catch (e) {
       console.log('loadUserData:', e.message)
     }
@@ -251,11 +254,96 @@ const useStore = create((set, get) => ({
     }
   },
 
+  // ══════════════════════════════════════════════════════════════════════
+  // PROVISION STOCKS TRACKING (v7)
+  // ══════════════════════════════════════════════════════════════════════
+  
+  provisionStocks: [],
+
+  loadProvisionStocks: async () => {
+    const { activePlan } = get()
+    if (!activePlan) return
+
+    try {
+      const { data, error } = await supabase
+        .from('provision_stocks')
+        .select('*')
+        .eq('plan_id', activePlan.id)
+
+      if (error) throw error
+      set({ provisionStocks: data || [] })
+    } catch (e) {
+      console.log('loadProvisionStocks:', e.message)
+    }
+  },
+
+  updateProvisionStock: async (itemId, amount) => {
+    const { activePlan, provisionStocks } = get()
+    if (!activePlan) return
+
+    try {
+      const { data, error } = await supabase
+        .from('provision_stocks')
+        .upsert({
+          plan_id: activePlan.id,
+          item_id: itemId,
+          amount_saved: amount,
+        }, { onConflict: 'plan_id,item_id' })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Mettre à jour le state local
+      const existing = provisionStocks.find(ps => ps.item_id === itemId)
+      if (existing) {
+        set({ provisionStocks: provisionStocks.map(ps => ps.item_id === itemId ? data : ps) })
+      } else {
+        set({ provisionStocks: [...provisionStocks, data] })
+      }
+    } catch (e) {
+      console.log('updateProvisionStock:', e.message)
+      throw e
+    }
+  },
+
+  updateMultipleProvisionStocks: async (updates) => {
+    const { activePlan } = get()
+    if (!activePlan || updates.length === 0) return
+
+    try {
+      const upserts = updates.map(u => ({
+        plan_id: activePlan.id,
+        item_id: u.itemId,
+        amount_saved: u.amount,
+      }))
+
+      const { error } = await supabase
+        .from('provision_stocks')
+        .upsert(upserts, { onConflict: 'plan_id,item_id' })
+
+      if (error) throw error
+
+      // Recharger tous les stocks
+      await get().loadProvisionStocks()
+    } catch (e) {
+      console.log('updateMultipleProvisionStocks:', e.message)
+      throw e
+    }
+  },
+
+  getProvisionStock: (itemId) => {
+    const { provisionStocks } = get()
+    const stock = provisionStocks.find(ps => ps.item_id === itemId)
+    return stock ? stock.amount_saved : 0
+  },
+
   reset: () => set({
     user: null,
     userProfile: null,
     activePlan: null,
     items: [],
+    provisionStocks: [],
     loading: false
   })
 }))

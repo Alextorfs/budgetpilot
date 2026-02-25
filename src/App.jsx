@@ -5,12 +5,18 @@ import Auth from './pages/Auth'
 import Onboarding from './pages/Onboarding'
 import Wizard from './pages/Wizard'
 import Dashboard from './pages/Dashboard'
+import Provisions from './pages/Provisions'
+import ManagePlan from './pages/ManagePlan'
+import Settings from './pages/Settings'
+import Navigation from './components/Navigation'
 import './styles/global.css'
 
 export default function App() {
   const { user, setUser, userProfile, activePlan, loadUserData, reset } = useStore()
   const [appLoading, setAppLoading] = useState(true)
   const [showWizard, setShowWizard] = useState(false)
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
 
   useEffect(() => {
     let mounted = true
@@ -31,7 +37,6 @@ export default function App() {
 
     init()
 
-    // Timeout de sécurité : max 5 secondes
     const timeout = setTimeout(() => {
       if (mounted) setAppLoading(false)
     }, 5000)
@@ -51,47 +56,48 @@ export default function App() {
     }
   }, [])
 
-  const handleAuthSuccess = async (authUser) => {
-    setAppLoading(true)
-    setUser(authUser)
-    await loadUserData(authUser.id)
-    setAppLoading(false)
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    reset()
-  }
-
-  // Chargement initial
   if (appLoading) {
     return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '1rem'
-      }}>
-        <div style={{ fontSize: '3rem' }}>⏳</div>
-        <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>Chargement...</div>
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Chargement de BudgetPilot...</p>
       </div>
     )
   }
 
-  // Pas connecté
-  if (!user) return <Auth onAuthSuccess={handleAuthSuccess} />
+  if (!user) return <Auth onAuth={() => {}} />
 
-  // Pas de profil → onboarding
-  if (!userProfile) return <Onboarding onComplete={() => setShowWizard(true)} />
+  if (!userProfile) return <Onboarding />
 
-  // Pas de plan → wizard
-  if (showWizard || !activePlan) {
-    return (
-      <Wizard onComplete={async () => {
-        await loadUserData(user.id)
-        setShowWizard(false)
-      }} />
-    )
+  if (!activePlan || showWizard) {
+    return <Wizard onComplete={() => setShowWizard(false)} />
   }
 
-  // Dashboard principal
-  return <Dashboard onLogout={handleLogout} />
+  // Render avec navigation
+  return (
+    <div className="app-container">
+      {activeTab === 'dashboard' && (
+        <Dashboard 
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+        />
+      )}
+      
+      {activeTab === 'provisions' && (
+        <Provisions 
+          selectedMonth={selectedMonth}
+        />
+      )}
+      
+      {activeTab === 'manage' && (
+        <ManagePlan onBack={() => setActiveTab('dashboard')} />
+      )}
+      
+      {activeTab === 'settings' && (
+        <Settings onBack={() => setActiveTab('dashboard')} />
+      )}
+
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+    </div>
+  )
 }

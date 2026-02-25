@@ -1,18 +1,14 @@
 import { useState } from 'react'
 import useStore from '../store'
-import ManagePlan from './ManagePlan'
-import Settings from './Settings'
 import CheckIn from './CheckIn'
 import '../styles/Dashboard.css'
 
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard({ selectedMonth, setSelectedMonth }) {
   const { userProfile, activePlan, items } = useStore()
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1)
-  const [showManage, setShowManage] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+  const currentMonth = selectedMonth || (new Date().getMonth() + 1)
   const [showCheckIn, setShowCheckIn] = useState(false)
 
   if (!activePlan || !userProfile) {
@@ -24,8 +20,6 @@ export default function Dashboard({ onLogout }) {
     )
   }
 
-  if (showManage) return <ManagePlan onBack={() => setShowManage(false)} />
-  if (showSettings) return <Settings onBack={() => setShowSettings(false)} />
   if (showCheckIn) return <CheckIn onBack={() => setShowCheckIn(false)} />
 
   const salary = activePlan.monthly_salary_net || 0
@@ -144,8 +138,8 @@ export default function Dashboard({ onLogout }) {
   const totalToSaveShared = hasShared ? commonProvisions : 0
   const totalToSave = totalToSavePersonal + (hasShared ? myTransfer : 0) + totalToSaveShared
 
-  // Argent libre = Salaire - dépenses mensuelles perso - épargne perso - virement commun - dépenses imprévues (free) + bonus (free)
-  const freeMoney = salary - personalMonthlyExpenses - totalToSavePersonal - (hasShared ? myTransfer : 0) - unplannedFromFree + bonusToFree
+  // Argent libre = Salaire - dépenses mensuelles perso - épargne perso - virement commun - épargne commune - dépenses imprévues (free) + bonus (free)
+  const freeMoney = salary - personalMonthlyExpenses - totalToSavePersonal - (hasShared ? myTransfer : 0) - (hasShared ? totalToSaveShared : 0) - unplannedFromFree + bonusToFree
 
   const pct = salary > 0 ? (freeMoney / salary) * 100 : 0
   const status = pct < 10
@@ -177,13 +171,9 @@ export default function Dashboard({ onLogout }) {
             <h1>Bonjour {userProfile.first_name} 👋</h1>
             <p className="current-month">{MONTHS[currentMonth - 1]} {activePlan.year}</p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <select className="month-selector" value={currentMonth} onChange={e => setCurrentMonth(parseInt(e.target.value))}>
-              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-            </select>
-            <button onClick={() => setShowSettings(true)} className="btn btn-secondary btn-sm">⚙️</button>
-            <button onClick={onLogout} className="btn btn-secondary btn-sm">🚪</button>
-          </div>
+          <select className="month-selector" value={currentMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
+            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </select>
         </div>
 
         {/* Check-in button */}
@@ -271,6 +261,12 @@ export default function Dashboard({ onLogout }) {
             <div className="info-row">
               <span className="info-label">Virement compte commun</span>
               <span className="info-value orange">{fmt(myTransfer)}</span>
+            </div>
+          )}
+          {hasShared && commonProvisions > 0 && (
+            <div className="info-row">
+              <span className="info-label">Virement épargne commune</span>
+              <span className="info-value purple">{fmt(commonProvisions)}</span>
             </div>
           )}
           <div className="divider"></div>
@@ -506,43 +502,6 @@ export default function Dashboard({ onLogout }) {
               <div style={{ fontSize: '0.8125rem', color: '#6B7280', marginBottom: '0.25rem' }}>Projection fin {activePlan.year}</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#7C3AED' }}>{fmt(projectedSharedSavings)}</div>
             </div>
-          </div>
-        )}
-
-        {/* Stocks épargne */}
-        <div className="savings-stock-card">
-          <div className="stock-label">🏦 Épargne projet (stock)</div>
-          <div className="stock-amount">{fmt(existingSavings)}</div>
-        </div>
-
-        <button className="btn btn-primary btn-lg manage-plan-btn" onClick={() => setShowManage(true)}>
-          📝 Gérer mes dépenses ({items.length})
-        </button>
-
-        {items.length > 0 && (
-          <div className="quick-expenses-preview">
-            <h3>Aperçu de mes dépenses</h3>
-            <div className="expenses-grid">
-              {items.filter(i => i.kind === 'expense' && !i.is_unplanned).slice(0, 6).map(item => {
-                const myAmount = item.sharing_type === 'common'
-                  ? item.amount * ((item.my_share_percent || 100) / 100)
-                  : item.amount
-                return (
-                  <div key={item.id} className="expense-preview-card">
-                    <div className="expense-title">{item.title}{item.sharing_type === 'common' && ' 👥'}</div>
-                    <div className="expense-amount">{fmt(myAmount)}</div>
-                    <div className="expense-frequency">
-                      {item.frequency === 'monthly' ? 'Mensuel' : MONTHS[(item.payment_month || 1) - 1]}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            {items.filter(i => i.kind === 'expense').length > 6 && (
-              <button className="btn btn-outline" onClick={() => setShowManage(true)} style={{ marginTop: '1rem' }}>
-                Voir toutes les dépenses →
-              </button>
-            )}
           </div>
         )}
 

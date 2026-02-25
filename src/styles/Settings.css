@@ -220,3 +220,21 @@
   margin-bottom: var(--spacing-lg);
   color: #1E40AF;
 }
+
+/* Logout section */
+.logout-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid var(--gray-200);
+  text-align: center;
+}
+
+.btn-danger {
+  background: #EF4444;
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #DC2626;
+}

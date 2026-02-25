@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import useStore from '../store'
+import { supabase } from '../supabaseClient'
 import '../styles/Settings.css'
 
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
@@ -360,6 +361,20 @@ export default function Settings({ onBack }) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Bouton déconnexion */}
+        <div className="logout-section">
+          <button 
+            className="btn btn-danger btn-lg"
+            onClick={async () => {
+              if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                await supabase.auth.signOut()
+              }
+            }}
+          >
+            🚪 Se déconnecter
+          </button>
         </div>
 
       </div>

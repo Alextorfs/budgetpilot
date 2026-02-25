@@ -6,19 +6,22 @@ const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Aoû
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
 
 export default function CheckIn({ onBack }) {
-  const { userProfile, activePlan, items, createCheckIn } = useStore()
+  const { userProfile, activePlan, items, createCheckIn, updateProfile, updateMultipleProvisionStocks, getProvisionStock } = useStore()
   const [currentMonth] = useState(new Date().getMonth() + 1)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    funSavingsDone: null,
-    funSavingsAmount: 0,
-    personalProvisionsDone: null,
-    personalProvisionsAmount: 0,
-    commonTransferDone: null,
-    commonTransferAmount: 0,
-    sharedSavingsDone: null,
-    sharedSavingsAmount: 0,
-  })
+  
+  // États pour les 4 questions
+  const [funSavingsDone, setFunSavingsDone] = useState(null)
+  const [funSavingsAmount, setFunSavingsAmount] = useState(0)
+  
+  const [personalProvisionsDone, setPersonalProvisionsDone] = useState(null)
+  const [personalProvisionsDetail, setPersonalProvisionsDetail] = useState({})
+  
+  const [commonTransferDone, setCommonTransferDone] = useState(null)
+  const [commonTransferAmount, setCommonTransferAmount] = useState(0)
+  
+  const [sharedSavingsDone, setSharedSavingsDone] = useState(null)
+  const [sharedSavingsDetail, setSharedSavingsDetail] = useState({})
 
   const hasShared = userProfile?.has_shared_account || false
   const funSavingsTarget = activePlan?.fun_savings_monthly_target || 0
@@ -26,22 +29,21 @@ export default function CheckIn({ onBack }) {
 
   const computeProvision = (item) => {
     if (!item.payment_month || item.frequency === 'monthly') return 0
-    if (currentMonth > item.payment_month) return 0
     const myAmount = item.sharing_type === 'common'
       ? item.amount * ((item.my_share_percent || 100) / 100)
       : item.amount
     if (item.allocation_mode === 'spread') return myAmount / 12
+    if (currentMonth > item.payment_month) return 0
     const monthsLeft = item.payment_month - currentMonth
     if (monthsLeft <= 0) return myAmount
     return myAmount / monthsLeft
   }
 
-  const provisionItems = items.filter(i => 
-    i.frequency !== 'monthly' && 
-    i.kind === 'expense' && 
-    i.payment_month >= currentMonth &&
-    !i.is_unplanned
-  )
+  const provisionItems = items.filter(i => {
+    if (i.frequency === 'monthly' || i.kind !== 'expense' || i.is_unplanned) return false
+    if (i.allocation_mode === 'spread') return true
+    return i.payment_month >= currentMonth
+  })
   
   const personalProvisionItems = provisionItems.filter(i => i.sharing_type === 'individual')
   const personalProvisionsTarget = personalProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
@@ -52,37 +54,113 @@ export default function CheckIn({ onBack }) {
   )
   const sharedSavingsTarget = commonProvisionItems.reduce((s, i) => s + computeProvision(i), 0)
 
-  const unplannedItems = items.filter(i => 
-    i.is_unplanned && 
-    i.unplanned_month === currentMonth
-  )
+  // Initialiser les détails avec les montants cibles
+  useEffect(() => {
+    const personalDetail = {}
+    personalProvisionItems.forEach(item => {
+      personalDetail[item.id] = computeProvision(item)
+    })
+    setPersonalProvisionsDetail(personalDetail)
+
+    const sharedDetail = {}
+    commonProvisionItems.forEach(item => {
+      sharedDetail[item.id] = computeProvision(item)
+    })
+    setSharedSavingsDetail(sharedDetail)
+  }, [items])
 
   useEffect(() => {
-    setForm(prev => ({
-      ...prev,
-      funSavingsAmount: funSavingsTarget,
-      personalProvisionsAmount: personalProvisionsTarget,
-      commonTransferAmount: myTransfer,
-      sharedSavingsAmount: sharedSavingsTarget,
-    }))
-  }, [funSavingsTarget, personalProvisionsTarget, myTransfer, sharedSavingsTarget])
+    setFunSavingsAmount(funSavingsTarget)
+    setCommonTransferAmount(myTransfer)
+  }, [funSavingsTarget, myTransfer])
+
+  const canSubmit = 
+    funSavingsDone !== null &&
+    (personalProvisionItems.length === 0 || personalProvisionsDone !== null) &&
+    (!hasShared || commonTransferDone !== null) &&
+    (commonProvisionItems.length === 0 || sharedSavingsDone !== null)
 
   const handleSubmit = async () => {
+    if (!canSubmit) return
     setSaving(true)
+
     try {
+      // 1. Créer le check-in
       await createCheckIn({
         month: currentMonth,
         year: activePlan.year,
-        fun_savings_done: form.funSavingsDone,
-        fun_savings_amount: form.funSavingsDone ? form.funSavingsAmount : 0,
-        personal_provisions_done: form.personalProvisionsDone,
-        personal_provisions_amount: form.personalProvisionsDone ? form.personalProvisionsAmount : 0,
-        common_transfer_done: form.commonTransferDone,
-        common_transfer_amount: form.commonTransferDone ? form.commonTransferAmount : 0,
-        shared_savings_done: form.sharedSavingsDone,
-        shared_savings_amount: form.sharedSavingsDone ? form.sharedSavingsAmount : 0,
+        fun_savings_done: funSavingsDone,
+        fun_savings_amount: funSavingsDone ? funSavingsAmount : (funSavingsAmount || 0),
+        personal_provisions_done: personalProvisionsDone === null ? true : personalProvisionsDone,
+        personal_provisions_amount: personalProvisionsDone ? personalProvisionsTarget : Object.values(personalProvisionsDetail).reduce((s, v) => s + v, 0),
+        common_transfer_done: commonTransferDone === null ? true : commonTransferDone,
+        common_transfer_amount: commonTransferDone ? myTransfer : (commonTransferAmount || 0),
+        shared_savings_done: sharedSavingsDone === null ? true : sharedSavingsDone,
+        shared_savings_amount: sharedSavingsDone ? sharedSavingsTarget : Object.values(sharedSavingsDetail).reduce((s, v) => s + v, 0),
       })
-      alert('✅ Check-in enregistré !')
+
+      // 2. Mettre à jour existing_provisions (provisions perso)
+      const totalPersonalProvisions = personalProvisionsDone 
+        ? personalProvisionsTarget 
+        : Object.values(personalProvisionsDetail).reduce((s, v) => s + v, 0)
+      
+      if (totalPersonalProvisions > 0) {
+        await updateProfile({
+          existing_provisions: (userProfile.existing_provisions || 0) + totalPersonalProvisions
+        })
+      }
+
+      // 3. Mettre à jour les provision_stocks pour provisions perso
+      if (personalProvisionItems.length > 0) {
+        const updates = []
+        
+        if (personalProvisionsDone) {
+          // Tout validé : ajouter le montant prévu pour chaque provision
+          personalProvisionItems.forEach(item => {
+            const amount = computeProvision(item)
+            const currentStock = getProvisionStock(item.id)
+            updates.push({ itemId: item.id, amount: currentStock + amount })
+          })
+        } else {
+          // Détail : ajouter le montant saisi pour chaque provision
+          Object.keys(personalProvisionsDetail).forEach(itemId => {
+            const amount = personalProvisionsDetail[itemId] || 0
+            const currentStock = getProvisionStock(itemId)
+            updates.push({ itemId, amount: currentStock + amount })
+          })
+        }
+        
+        if (updates.length > 0) {
+          await updateMultipleProvisionStocks(updates)
+        }
+      }
+
+      // 4. Mettre à jour les provision_stocks pour provisions communes
+      if (commonProvisionItems.length > 0) {
+        const updates = []
+        
+        if (sharedSavingsDone) {
+          // Tout validé
+          commonProvisionItems.forEach(item => {
+            const amount = computeProvision(item)
+            const currentStock = getProvisionStock(item.id)
+            updates.push({ itemId: item.id, amount: currentStock + amount })
+          })
+        } else {
+          // Détail
+          Object.keys(sharedSavingsDetail).forEach(itemId => {
+            const amount = sharedSavingsDetail[itemId] || 0
+            const currentStock = getProvisionStock(itemId)
+            updates.push({ itemId, amount: currentStock + amount })
+          })
+        }
+        
+        if (updates.length > 0) {
+          await updateMultipleProvisionStocks(updates)
+        }
+      }
+
+      alert('✅ Check-in validé !')
       onBack()
     } catch (e) {
       alert('Erreur : ' + e.message)
@@ -91,223 +169,203 @@ export default function CheckIn({ onBack }) {
     }
   }
 
-  const canSubmit = form.funSavingsDone !== null && 
-    (personalProvisionsTarget === 0 || form.personalProvisionsDone !== null) &&
-    (!hasShared || form.commonTransferDone !== null) &&
-    (sharedSavingsTarget === 0 || form.sharedSavingsDone !== null)
-
   return (
     <div className="checkin-page">
       <div className="checkin-container">
         
         <div className="checkin-header">
           <button className="btn btn-secondary" onClick={onBack}>← Retour</button>
-          <div>
-            <h1>📝 Check-in de {MONTHS[currentMonth - 1]}</h1>
-            <p className="checkin-subtitle">Valide tes virements du mois</p>
-          </div>
+          <h1>📋 Check-in {MONTHS[currentMonth - 1]}</h1>
         </div>
 
-        {/* Épargne projet */}
-        <div className="checkin-card">
-          <div className="checkin-question">
-            <div className="question-icon">🎯</div>
-            <div className="question-content">
-              <h3>As-tu viré ton épargne projet ?</h3>
-              <p className="question-detail">Montant prévu : <strong>{fmt(funSavingsTarget)}</strong></p>
-            </div>
-          </div>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: '100%' }}></div>
+        </div>
 
-          <div className="answer-buttons">
+        {/* Question 1 : Épargne projet */}
+        <div className="question-card">
+          <h3>🎯 Épargne projet</h3>
+          <p>As-tu viré ton épargne projet ce mois-ci ?</p>
+          <div className="amount-display">Montant prévu : {fmt(funSavingsTarget)}</div>
+          
+          <div className="choice-buttons">
             <button 
-              className={`answer-btn ${form.funSavingsDone === true ? 'active yes' : ''}`}
-              onClick={() => setForm(p => ({ ...p, funSavingsDone: true, funSavingsAmount: funSavingsTarget }))}
+              className={`choice-btn ${funSavingsDone === true ? 'active' : ''}`}
+              onClick={() => {
+                setFunSavingsDone(true)
+                setFunSavingsAmount(funSavingsTarget)
+              }}
             >
               ✅ Oui
             </button>
             <button 
-              className={`answer-btn ${form.funSavingsDone === false ? 'active no' : ''}`}
-              onClick={() => setForm(p => ({ ...p, funSavingsDone: false, funSavingsAmount: 0 }))}
+              className={`choice-btn ${funSavingsDone === false ? 'active' : ''}`}
+              onClick={() => setFunSavingsDone(false)}
             >
               ❌ Non
             </button>
           </div>
 
-          {form.funSavingsDone === false && (
-            <div className="amount-adjust fade-in">
-              <label>Si tu as viré une partie, combien ?</label>
-              <div className="amount-input-group">
-                <input 
-                  type="number" 
-                  value={form.funSavingsAmount} 
-                  onChange={e => setForm(p => ({ ...p, funSavingsAmount: parseFloat(e.target.value) || 0 }))}
-                />
-                <span>€</span>
-              </div>
+          {funSavingsDone === false && (
+            <div className="amount-adjust">
+              <label>Montant réellement viré :</label>
+              <input 
+                type="number" 
+                value={funSavingsAmount} 
+                onChange={e => setFunSavingsAmount(parseFloat(e.target.value) || 0)}
+              />
             </div>
           )}
         </div>
 
-        {/* Provisions perso */}
+        {/* Question 2 : Provisions perso */}
         {personalProvisionItems.length > 0 && (
-          <div className="checkin-card">
-            <div className="checkin-question">
-              <div className="question-icon">💰</div>
-              <div className="question-content">
-                <h3>As-tu mis de côté tes provisions perso ?</h3>
-                <p className="question-detail">Montant prévu : <strong>{fmt(personalProvisionsTarget)}</strong></p>
-                <div className="provision-list">
-                  {personalProvisionItems.map(item => (
-                    <span key={item.id} className="provision-tag">{item.title} • {fmt(computeProvision(item))}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="answer-buttons">
+          <div className="question-card">
+            <h3>💼 Provisions personnelles</h3>
+            <p>As-tu mis de côté tes provisions perso ce mois-ci ?</p>
+            <div className="amount-display">Montant prévu : {fmt(personalProvisionsTarget)}</div>
+            
+            <div className="choice-buttons">
               <button 
-                className={`answer-btn ${form.personalProvisionsDone === true ? 'active yes' : ''}`}
-                onClick={() => setForm(p => ({ ...p, personalProvisionsDone: true, personalProvisionsAmount: personalProvisionsTarget }))}
+                className={`choice-btn ${personalProvisionsDone === true ? 'active' : ''}`}
+                onClick={() => setPersonalProvisionsDone(true)}
               >
                 ✅ Oui
               </button>
               <button 
-                className={`answer-btn ${form.personalProvisionsDone === false ? 'active no' : ''}`}
-                onClick={() => setForm(p => ({ ...p, personalProvisionsDone: false, personalProvisionsAmount: 0 }))}
+                className={`choice-btn ${personalProvisionsDone === false ? 'active' : ''}`}
+                onClick={() => setPersonalProvisionsDone(false)}
               >
                 ❌ Non
               </button>
             </div>
 
-            {form.personalProvisionsDone === false && (
-              <div className="amount-adjust fade-in">
-                <label>Si tu as mis une partie de côté, combien ?</label>
-                <div className="amount-input-group">
-                  <input 
-                    type="number" 
-                    value={form.personalProvisionsAmount} 
-                    onChange={e => setForm(p => ({ ...p, personalProvisionsAmount: parseFloat(e.target.value) || 0 }))}
-                  />
-                  <span>€</span>
+            {personalProvisionsDone === false && (
+              <div className="provisions-detail">
+                <p className="detail-subtitle">Montant par provision :</p>
+                {personalProvisionItems.map(item => {
+                  const target = computeProvision(item)
+                  return (
+                    <div key={item.id} className="provision-item">
+                      <label>{item.title}</label>
+                      <div className="provision-input-group">
+                        <span className="provision-target">Prévu : {fmt(target)}</span>
+                        <input 
+                          type="number" 
+                          value={personalProvisionsDetail[item.id] || 0}
+                          onChange={e => setPersonalProvisionsDetail({
+                            ...personalProvisionsDetail,
+                            [item.id]: parseFloat(e.target.value) || 0
+                          })}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="provisions-total">
+                  Total : {fmt(Object.values(personalProvisionsDetail).reduce((s, v) => s + v, 0))}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Compte commun */}
+        {/* Question 3 : Compte commun */}
         {hasShared && (
-          <div className="checkin-card">
-            <div className="checkin-question">
-              <div className="question-icon">🏠</div>
-              <div className="question-content">
-                <h3>As-tu viré sur le compte commun ?</h3>
-                <p className="question-detail">Montant prévu : <strong>{fmt(myTransfer)}</strong></p>
-              </div>
-            </div>
-
-            <div className="answer-buttons">
+          <div className="question-card">
+            <h3>🏠 Compte commun</h3>
+            <p>As-tu viré ta part au compte commun ?</p>
+            <div className="amount-display">Montant prévu : {fmt(myTransfer)}</div>
+            
+            <div className="choice-buttons">
               <button 
-                className={`answer-btn ${form.commonTransferDone === true ? 'active yes' : ''}`}
-                onClick={() => setForm(p => ({ ...p, commonTransferDone: true, commonTransferAmount: myTransfer }))}
+                className={`choice-btn ${commonTransferDone === true ? 'active' : ''}`}
+                onClick={() => {
+                  setCommonTransferDone(true)
+                  setCommonTransferAmount(myTransfer)
+                }}
               >
                 ✅ Oui
               </button>
               <button 
-                className={`answer-btn ${form.commonTransferDone === false ? 'active no' : ''}`}
-                onClick={() => setForm(p => ({ ...p, commonTransferDone: false, commonTransferAmount: 0 }))}
+                className={`choice-btn ${commonTransferDone === false ? 'active' : ''}`}
+                onClick={() => setCommonTransferDone(false)}
               >
                 ❌ Non
               </button>
             </div>
 
-            {form.commonTransferDone === false && (
-              <div className="amount-adjust fade-in">
-                <label>Si tu as viré une partie, combien ?</label>
-                <div className="amount-input-group">
-                  <input 
-                    type="number" 
-                    value={form.commonTransferAmount} 
-                    onChange={e => setForm(p => ({ ...p, commonTransferAmount: parseFloat(e.target.value) || 0 }))}
-                  />
-                  <span>€</span>
-                </div>
+            {commonTransferDone === false && (
+              <div className="amount-adjust">
+                <label>Montant réellement viré :</label>
+                <input 
+                  type="number" 
+                  value={commonTransferAmount} 
+                  onChange={e => setCommonTransferAmount(parseFloat(e.target.value) || 0)}
+                />
               </div>
             )}
           </div>
         )}
 
-        {/* Épargne commune */}
+        {/* Question 4 : Épargne commune */}
         {hasShared && commonProvisionItems.length > 0 && (
-          <div className="checkin-card">
-            <div className="checkin-question">
-              <div className="question-icon">💰</div>
-              <div className="question-content">
-                <h3>As-tu viré sur l'épargne commune ?</h3>
-                <p className="question-detail">Montant prévu : <strong>{fmt(sharedSavingsTarget)}</strong></p>
-                <div className="provision-list">
-                  {commonProvisionItems.map(item => (
-                    <span key={item.id} className="provision-tag">{item.title} • {fmt(computeProvision(item))}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="answer-buttons">
+          <div className="question-card">
+            <h3>💰 Épargne commune (provisions)</h3>
+            <p>As-tu viré tes provisions épargne commune ?</p>
+            <div className="amount-display">Montant prévu : {fmt(sharedSavingsTarget)}</div>
+            
+            <div className="choice-buttons">
               <button 
-                className={`answer-btn ${form.sharedSavingsDone === true ? 'active yes' : ''}`}
-                onClick={() => setForm(p => ({ ...p, sharedSavingsDone: true, sharedSavingsAmount: sharedSavingsTarget }))}
+                className={`choice-btn ${sharedSavingsDone === true ? 'active' : ''}`}
+                onClick={() => setSharedSavingsDone(true)}
               >
                 ✅ Oui
               </button>
               <button 
-                className={`answer-btn ${form.sharedSavingsDone === false ? 'active no' : ''}`}
-                onClick={() => setForm(p => ({ ...p, sharedSavingsDone: false, sharedSavingsAmount: 0 }))}
+                className={`choice-btn ${sharedSavingsDone === false ? 'active' : ''}`}
+                onClick={() => setSharedSavingsDone(false)}
               >
                 ❌ Non
               </button>
             </div>
 
-            {form.sharedSavingsDone === false && (
-              <div className="amount-adjust fade-in">
-                <label>Si tu as viré une partie, combien ?</label>
-                <div className="amount-input-group">
-                  <input 
-                    type="number" 
-                    value={form.sharedSavingsAmount} 
-                    onChange={e => setForm(p => ({ ...p, sharedSavingsAmount: parseFloat(e.target.value) || 0 }))}
-                  />
-                  <span>€</span>
+            {sharedSavingsDone === false && (
+              <div className="provisions-detail">
+                <p className="detail-subtitle">Montant par provision :</p>
+                {commonProvisionItems.map(item => {
+                  const target = computeProvision(item)
+                  return (
+                    <div key={item.id} className="provision-item">
+                      <label>{item.title} ({item.my_share_percent}%)</label>
+                      <div className="provision-input-group">
+                        <span className="provision-target">Prévu : {fmt(target)}</span>
+                        <input 
+                          type="number" 
+                          value={sharedSavingsDetail[item.id] || 0}
+                          onChange={e => setSharedSavingsDetail({
+                            ...sharedSavingsDetail,
+                            [item.id]: parseFloat(e.target.value) || 0
+                          })}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="provisions-total">
+                  Total : {fmt(Object.values(sharedSavingsDetail).reduce((s, v) => s + v, 0))}
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Info dépenses imprévues */}
-        {unplannedItems.length > 0 && (
-          <div className="checkin-info-box">
-            <strong>💡 Dépenses imprévues ce mois-ci :</strong>
-            {unplannedItems.map(item => (
-              <div key={item.id} style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
-                • {item.title} : {fmt(item.amount)}
-                {item.funded_from_savings > 0 && ` (${fmt(item.funded_from_savings)} épargne projet)`}
-                {item.funded_from_free > 0 && ` (${fmt(item.funded_from_free)} argent libre)`}
-                {item.funded_from_shared_savings > 0 && ` (${fmt(item.funded_from_shared_savings)} épargne commune)`}
-              </div>
-            ))}
-            <div style={{ marginTop: '0.5rem', fontStyle: 'italic', fontSize: '0.8125rem', color: '#6B7280' }}>
-              → Déjà déduit, aucune action requise
-            </div>
           </div>
         )}
 
         <button 
           className="btn btn-primary btn-lg" 
-          onClick={handleSubmit} 
+          onClick={handleSubmit}
           disabled={!canSubmit || saving}
         >
-          {saving ? 'Enregistrement...' : '✅ Valider le check-in'}
+          {saving ? 'Validation...' : '✅ Valider le check-in'}
         </button>
 
       </div>

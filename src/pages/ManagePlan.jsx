@@ -192,6 +192,8 @@ export default function ManagePlan({ onBack }) {
 }
 
 function EditItemForm({ item, setItem, onSave, onCancel }) {
+  const hasShared = item.sharing_type === 'common'
+  
   return (
     <div className="edit-form">
       <div className="form-group">
@@ -202,6 +204,27 @@ function EditItemForm({ item, setItem, onSave, onCancel }) {
           onChange={e => setItem({...item, title: e.target.value})}
         />
       </div>
+
+      <div className="form-group">
+        <label>Fréquence</label>
+        <div className="funding-buttons">
+          <button 
+            type="button"
+            className={`funding-btn ${item.frequency === 'monthly' ? 'active' : ''}`}
+            onClick={() => setItem({...item, frequency: 'monthly', payment_month: null, allocation_mode: null})}
+          >
+            📅 Mensuel
+          </button>
+          <button 
+            type="button"
+            className={`funding-btn ${item.frequency === 'yearly' ? 'active' : ''}`}
+            onClick={() => setItem({...item, frequency: 'yearly', payment_month: item.payment_month || 1, allocation_mode: 'prorata'})}
+          >
+            📆 Annuel
+          </button>
+        </div>
+      </div>
+
       <div className="form-group">
         <label>Montant</label>
         <input 
@@ -210,17 +233,89 @@ function EditItemForm({ item, setItem, onSave, onCancel }) {
           onChange={e => setItem({...item, amount: parseFloat(e.target.value) || 0})}
         />
       </div>
+
       {item.frequency === 'yearly' && !item.is_unplanned && (
-        <div className="form-group">
-          <label>Mois de paiement</label>
-          <select 
-            value={item.payment_month || 1} 
-            onChange={e => setItem({...item, payment_month: parseInt(e.target.value)})}
-          >
-            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-        </div>
+        <>
+          <div className="form-group">
+            <label>Mois de paiement</label>
+            <select 
+              value={item.payment_month || 1} 
+              onChange={e => setItem({...item, payment_month: parseInt(e.target.value)})}
+            >
+              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Mode de provision</label>
+            <div className="funding-buttons">
+              <button 
+                type="button"
+                className={`funding-btn ${item.allocation_mode === 'prorata' ? 'active' : ''}`}
+                onClick={() => setItem({...item, allocation_mode: 'prorata'})}
+              >
+                Prorata
+              </button>
+              <button 
+                type="button"
+                className={`funding-btn ${item.allocation_mode === 'spread' ? 'active' : ''}`}
+                onClick={() => setItem({...item, allocation_mode: 'spread'})}
+              >
+                Lissé
+              </button>
+            </div>
+          </div>
+        </>
       )}
+
+      <div className="form-group">
+        <label>Type de dépense</label>
+        <div className="funding-buttons">
+          <button 
+            type="button"
+            className={`funding-btn ${item.sharing_type === 'individual' ? 'active' : ''}`}
+            onClick={() => setItem({...item, sharing_type: 'individual', my_share_percent: 100, is_included_in_shared_transfer: false})}
+          >
+            👤 Personnelle
+          </button>
+          <button 
+            type="button"
+            className={`funding-btn ${item.sharing_type === 'common' ? 'active' : ''}`}
+            onClick={() => setItem({...item, sharing_type: 'common', my_share_percent: item.my_share_percent || 50})}
+          >
+            👥 Commune
+          </button>
+        </div>
+      </div>
+
+      {hasShared && (
+        <>
+          <div className="form-group">
+            <label>Ta part : {item.my_share_percent || 50}%</label>
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              step="10" 
+              value={item.my_share_percent || 50} 
+              onChange={e => setItem({...item, my_share_percent: parseInt(e.target.value)})}
+            />
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={item.is_included_in_shared_transfer || false}
+                onChange={e => setItem({...item, is_included_in_shared_transfer: e.target.checked})}
+                style={{ width: 'auto' }}
+              />
+              Inclus dans le virement compte commun
+            </label>
+          </div>
+        </>
+      )}
+
       <div className="form-actions">
         <button className="btn btn-secondary btn-sm" onClick={onCancel}>Annuler</button>
         <button className="btn btn-primary btn-sm" onClick={onSave}>Sauvegarder</button>

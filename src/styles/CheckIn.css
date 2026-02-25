@@ -162,3 +162,64 @@
   .checkin-header { flex-direction: column; }
   .answer-buttons { grid-template-columns: 1fr; }
 }
+
+/* Provisions detail */
+.provisions-detail {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+}
+
+.detail-subtitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--gray-700);
+}
+
+.provision-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: var(--radius-md);
+}
+
+.provision-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.provision-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.provision-target {
+  font-size: 0.8125rem;
+  color: var(--gray-600);
+  flex-shrink: 0;
+}
+
+.provision-input-group input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+}
+
+.provisions-total {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--gray-200);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--primary);
+}
