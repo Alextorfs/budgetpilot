@@ -6,9 +6,13 @@ const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Aoû
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
 
 export default function Provisions({ selectedMonth }) {
-  const { items, userProfile, getProvisionStock } = useStore()
+  const { items, userProfile, getProvisionStock, spendProvision } = useStore()
   const currentMonth = selectedMonth || (new Date().getMonth() + 1)
   const hasShared = userProfile?.has_shared_account || false
+  
+  const [spendingProvision, setSpendingProvision] = useState(null)
+  const [spendAmount, setSpendAmount] = useState(0)
+  const [spending, setSpending] = useState(false)
 
   const computeProvision = (item) => {
     if (!item.payment_month || item.frequency === 'monthly') return 0
@@ -33,6 +37,28 @@ export default function Provisions({ selectedMonth }) {
     i.sharing_type === 'common' && 
     !i.is_included_in_shared_transfer
   )
+
+  const handleSpendClick = (item) => {
+    const saved = getProvisionStock(item.id)
+    setSpendingProvision(item)
+    setSpendAmount(Math.min(saved, item.amount))
+  }
+
+  const handleSpendConfirm = async () => {
+    if (!spendingProvision || spendAmount <= 0) return
+    setSpending(true)
+    try {
+      const isCommon = spendingProvision.sharing_type === 'common'
+      await spendProvision(spendingProvision.id, spendAmount, isCommon)
+      alert(`✅ Provision "${spendingProvision.title}" dépensée : ${fmt(spendAmount)}`)
+      setSpendingProvision(null)
+      setSpendAmount(0)
+    } catch (e) {
+      alert('Erreur : ' + e.message)
+    } finally {
+      setSpending(false)
+    }
+  }
 
   return (
     <div className="provisions-page">
@@ -94,6 +120,15 @@ export default function Provisions({ selectedMonth }) {
                       {fmt(monthlyProvision)}/mois
                     </span>
                   </div>
+
+                  {saved > 0 && (
+                    <button 
+                      className="btn btn-outline btn-sm spend-btn"
+                      onClick={() => handleSpendClick(item)}
+                    >
+                      💸 Dépenser cette provision
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -152,6 +187,15 @@ export default function Provisions({ selectedMonth }) {
                       {fmt(monthlyProvision)}/mois
                     </span>
                   </div>
+
+                  {saved > 0 && (
+                    <button 
+                      className="btn btn-outline btn-sm spend-btn"
+                      onClick={() => handleSpendClick(item)}
+                    >
+                      💸 Dépenser cette provision
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -162,6 +206,56 @@ export default function Provisions({ selectedMonth }) {
           <div className="empty-state">
             <p>📭 Aucune provision en cours</p>
             <p className="empty-subtitle">Ajoute des dépenses annuelles pour commencer à provisionner</p>
+          </div>
+        )}
+
+        {/* Modal dépense */}
+        {spendingProvision && (
+          <div className="modal-overlay" onClick={() => setSpendingProvision(null)}>
+            <div className="modal-content spend-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>💸 Dépenser une provision</h2>
+                <button className="close-btn" onClick={() => setSpendingProvision(null)}>✕</button>
+              </div>
+
+              <div className="modal-body">
+                <div className="spend-info">
+                  <h3>{spendingProvision.title}</h3>
+                  <p>Stock disponible : {fmt(getProvisionStock(spendingProvision.id))}</p>
+                </div>
+
+                <div className="form-group">
+                  <label>Montant dépensé :</label>
+                  <input 
+                    type="number"
+                    value={spendAmount}
+                    onChange={e => setSpendAmount(parseFloat(e.target.value) || 0)}
+                    max={getProvisionStock(spendingProvision.id)}
+                    min="0"
+                  />
+                </div>
+
+                <p className="spend-note">
+                  Cette action diminuera le stock de la provision et le stock global correspondant.
+                </p>
+              </div>
+
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setSpendingProvision(null)}
+                >
+                  Annuler
+                </button>
+                <button 
+                  className="btn btn-primary"
+                  onClick={handleSpendConfirm}
+                  disabled={spendAmount <= 0 || spending}
+                >
+                  {spending ? 'Traitement...' : 'Confirmer'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

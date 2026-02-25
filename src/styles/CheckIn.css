@@ -1,180 +1,156 @@
 .checkin-page {
   min-height: 100vh;
-  background: var(--gray-50);
-  padding: var(--spacing-lg);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+  padding-bottom: 100px;
 }
 
 .checkin-container {
-  max-width: 700px;
+  max-width: 600px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .checkin-header {
   display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  color: white;
 }
 
 .checkin-header h1 {
   font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+  font-weight: 800;
 }
 
-.checkin-subtitle {
-  font-size: 0.9375rem;
-  color: var(--gray-500);
+.progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  margin-bottom: 2rem;
+  overflow: hidden;
 }
 
-.checkin-card {
+.progress-fill {
+  height: 100%;
   background: white;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-  padding: var(--spacing-xl);
-  margin-bottom: var(--spacing-lg);
+  border-radius: 999px;
+  transition: width 0.3s ease;
 }
 
-.checkin-question {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: var(--spacing-lg);
+.question-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: visible;
+  min-height: auto;
+  height: auto;
 }
 
-.question-icon {
-  font-size: 2rem;
-  flex-shrink: 0;
-}
-
-.question-content h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
+.question-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
   margin-bottom: 0.5rem;
+  color: var(--gray-900);
+  white-space: normal;
+  word-wrap: break-word;
 }
 
-.question-detail {
+.question-card p {
   font-size: 0.9375rem;
   color: var(--gray-600);
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  white-space: normal;
+  word-wrap: break-word;
 }
 
-.provision-list {
+.amount-display {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: 0.5rem;
+  text-align: center;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.choice-buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 1rem;
+  margin: 1.5rem 0;
 }
 
-.provision-tag {
-  background: var(--gray-100);
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-md);
-  font-size: 0.8125rem;
-  color: var(--gray-700);
-}
-
-.answer-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.answer-btn {
+.choice-btn {
+  flex: 1;
   padding: 1rem;
   border: 2px solid var(--gray-300);
-  border-radius: var(--radius-lg);
   background: white;
-  font-size: 1.125rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.answer-btn:hover {
+.choice-btn:hover {
   border-color: var(--primary);
   background: var(--gray-50);
 }
 
-.answer-btn.active {
-  border-width: 3px;
-}
-
-.answer-btn.active.yes {
-  border-color: #10B981;
-  background: #ECFDF5;
-  color: #065F46;
-}
-
-.answer-btn.active.no {
-  border-color: #EF4444;
-  background: #FEF2F2;
-  color: #991B1B;
+.choice-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
 }
 
 .amount-adjust {
-  background: var(--gray-50);
+  margin-top: 1.5rem;
   padding: 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  border-radius: 0.75rem;
 }
 
 .amount-adjust label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 0.5rem;
   color: var(--gray-700);
 }
 
-.amount-input-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.amount-input-group input {
-  flex: 1;
+.amount-adjust input {
+  width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--gray-300);
-  border-radius: var(--radius-md);
-  font-size: 1.125rem;
-  font-weight: 600;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
-.amount-input-group span {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--gray-500);
-}
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.fade-in {
-  animation: fade-in 0.3s ease;
-}
-
-@media (max-width: 640px) {
-  .checkin-page { padding: var(--spacing-md); }
-  .checkin-header { flex-direction: column; }
-  .answer-buttons { grid-template-columns: 1fr; }
+.amount-adjust input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 /* Provisions detail */
 .provisions-detail {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   padding: 1rem;
   background: var(--gray-50);
-  border-radius: var(--radius-md);
+  border-radius: 0.75rem;
 }
 
 .detail-subtitle {
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   color: var(--gray-700);
 }
 
@@ -182,10 +158,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
   background: white;
-  border-radius: var(--radius-md);
+  border-radius: 0.5rem;
 }
 
 .provision-item label {
@@ -210,16 +186,52 @@
   flex: 1;
   padding: 0.5rem;
   border: 1px solid var(--gray-300);
-  border-radius: var(--radius-md);
+  border-radius: 0.5rem;
   font-size: 0.9375rem;
 }
 
 .provisions-total {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 2px solid var(--gray-200);
   font-size: 1rem;
   font-weight: 700;
   text-align: right;
   color: var(--primary);
+}
+
+/* Bouton validation */
+.btn-lg {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  margin-top: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .checkin-page {
+    padding: 1rem;
+    padding-bottom: 100px;
+  }
+
+  .checkin-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .question-card {
+    padding: 1.25rem;
+  }
+
+  .choice-buttons {
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .choice-btn {
+    padding: 0.875rem;
+    font-size: 0.9375rem;
+  }
 }

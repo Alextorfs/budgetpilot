@@ -360,53 +360,6 @@ export default function Dashboard({ selectedMonth, setSelectedMonth }) {
           </div>
         </div>
 
-        {/* Provisions détail */}
-        {provisionItems.length > 0 && (
-          <div className="provisions-detail">
-            <h3>📋 Ce que tu mets de côté ce mois-ci</h3>
-            <p className="provisions-subtitle">Pour être prêt le jour J de chaque paiement</p>
-            {[...personalProvisionItems, ...commonProvisionItems].map(item => {
-              const provision = computeProvision(item)
-              const progress = computeProgress(item)
-              const monthsUntil = item.payment_month - currentMonth
-              const myAmount = item.sharing_type === 'common'
-                ? item.amount * ((item.my_share_percent || 100) / 100)
-                : item.amount
-              const isWarning = monthsUntil <= 2 && item.allocation_mode === 'prorata'
-              const alreadySaved = myAmount * (progress / 100)
-
-              return (
-                <div key={item.id} className={`provision-item ${isWarning ? 'provision-warning' : ''}`}>
-                  <div className="provision-header">
-                    <div className="provision-title">
-                      {item.title}
-                      {item.sharing_type === 'common' && <span className="badge-small">👥</span>}
-                    </div>
-                    <div className="provision-amount-badge">{fmt(provision)}<span>/mois</span></div>
-                  </div>
-
-                  {isWarning && (
-                    <div className="provision-alert">
-                      ⚠️ Attention — seulement {monthsUntil} mois avant le paiement ! La mensualité est élevée.
-                    </div>
-                  )}
-
-                  <div className="provision-message">
-                    {item.allocation_mode === 'prorata'
-                      ? `Vire ${fmt(provision)} ce mois-ci → tu auras ${fmt(myAmount)} pour ${item.title} en ${MONTHS[item.payment_month - 1]}`
-                      : `Vire ${fmt(provision)}/mois (lissé 12 mois) → objectif ${fmt(myAmount)} pour ${MONTHS[item.payment_month - 1]}`
-                    }
-                  </div>
-
-                  <div className="provision-progress-label" style={{ marginTop: '0.5rem' }}>
-                    <span>{fmt(alreadySaved)} épargnés (estimation)</span>
-                    <span>{progress}% — objectif {fmt(myAmount)}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
 
         {/* Compte commun */}
         {hasShared && (

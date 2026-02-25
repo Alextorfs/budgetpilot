@@ -219,7 +219,7 @@ const useStore = create((set, get) => ({
 
     const { error } = await supabase
       .from('check_ins')
-      .insert({
+      .upsert({
         plan_id: activePlan.id,
         month: data.month,
         year: data.year,
@@ -231,7 +231,7 @@ const useStore = create((set, get) => ({
         common_transfer_amount: data.common_transfer_amount,
         shared_savings_done: data.shared_savings_done,
         shared_savings_amount: data.shared_savings_amount,
-      })
+      }, { onConflict: 'plan_id,month,year' })
 
     if (error) throw error
 
@@ -336,6 +336,32 @@ const useStore = create((set, get) => ({
     const { provisionStocks } = get()
     const stock = provisionStocks.find(ps => ps.item_id === itemId)
     return stock ? stock.amount_saved : 0
+  },
+
+  spendProvision: async (itemId, amountSpent, isCommon = false) => {
+    const { userProfile } = get()
+    if (!userProfile) return
+
+    try {
+      // Diminuer le stock de la provision
+      const currentStock = get().getProvisionStock(itemId)
+      const newStock = Math.max(0, currentStock - amountSpent)
+      await get().updateProvisionStock(itemId, newStock)
+
+      // Diminuer le stock global correspondant
+      if (isCommon) {
+        await get().updateProfile({
+          existing_shared_savings: Math.max(0, (userProfile.existing_shared_savings || 0) - amountSpent)
+        })
+      } else {
+        await get().updateProfile({
+          existing_provisions: Math.max(0, (userProfile.existing_provisions || 0) - amountSpent)
+        })
+      }
+    } catch (e) {
+      console.log('spendProvision:', e.message)
+      throw e
+    }
   },
 
   reset: () => set({
