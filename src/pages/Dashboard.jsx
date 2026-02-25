@@ -147,9 +147,20 @@ export default function Dashboard({ selectedMonth, setSelectedMonth }) {
     : pct < 20 ? { label: '✓ Budget équilibré', cls: 'balanced' }
     : { label: '🌿 Budget confortable', cls: 'comfortable' }
 
-  // Projection épargne projet : stock + virements mensuels restants + bonus - dépenses imprévues
+  // Projection épargne projet : stock + virements mensuels restants + bonus FUTURS - dépenses imprévues
   const monthsLeft = 12 - currentMonth + 1
-  const projectedSavings = existingSavings + (funSavings * monthsLeft) + bonusToSavings - unplannedFromSavings
+  
+  // Bonus FUTURS uniquement (pas ceux du mois en cours ou passés, car déjà dans le stock)
+  const futureBonusToSavings = items
+    .filter(i => 
+      i.kind === 'income' && 
+      i.frequency === 'yearly' && 
+      i.payment_month > currentMonth &&
+      i.goes_to_savings
+    )
+    .reduce((s, i) => s + i.amount, 0)
+  
+  const projectedSavings = existingSavings + (funSavings * monthsLeft) + futureBonusToSavings - unplannedFromSavings
 
   // Projection épargne commune
   const projectedSharedSavings = existingSharedSavings + (commonProvisions * monthsLeft) - unplannedFromSharedSavings
