@@ -67,7 +67,11 @@ export default function App() {
 
   if (!user) return <Auth onAuth={() => {}} />
 
-  if (!userProfile) return <Onboarding />
+  if (!userProfile) {
+    return <Onboarding onComplete={async () => {
+      await loadUserData(user.id)
+    }} />
+  }
 
   if (!activePlan || showWizard) {
     return <Wizard onComplete={() => setShowWizard(false)} />

@@ -56,6 +56,7 @@ export default function Onboarding({ onComplete }) {
           monthlySalaryNet: form.monthlySalary,
           funSavingsMonthlyTarget: form.funSavingsTarget,
         })
+        
         onComplete()
       } catch (e) {
         setError('Erreur : ' + e.message)
