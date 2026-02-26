@@ -78,16 +78,24 @@ const useStore = create((set, get) => ({
     const { userProfile } = get()
     if (!userProfile) return null
 
+    // D'abord, supprimer les plans existants pour cette année
+    await supabase
+      .from('plans')
+      .delete()
+      .eq('profile_id', userProfile.id)
+      .eq('year', data.year)
+
+    // Puis créer le nouveau plan
     const { data: plan, error } = await supabase
       .from('plans')
-      .upsert({
+      .insert({
         profile_id: userProfile.id,
         year: data.year,
         start_month: data.startMonth,
         monthly_salary_net: data.monthlySalaryNet,
         fun_savings_monthly_target: data.funSavingsMonthlyTarget,
         is_active: true
-      }, { onConflict: 'profile_id,year' })
+      })
       .select()
       .single()
 
