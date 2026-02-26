@@ -80,14 +80,14 @@ const useStore = create((set, get) => ({
 
     const { data: plan, error } = await supabase
       .from('plans')
-      .insert({
+      .upsert({
         profile_id: userProfile.id,
         year: data.year,
         start_month: data.startMonth,
         monthly_salary_net: data.monthlySalaryNet,
         fun_savings_monthly_target: data.funSavingsMonthlyTarget,
         is_active: true
-      })
+      }, { onConflict: 'profile_id,year' })
       .select()
       .single()
 
