@@ -57,6 +57,10 @@ export default function Onboarding({ onComplete }) {
           funSavingsMonthlyTarget: form.funSavingsTarget,
         })
         
+        // Attendre 500ms que Supabase finisse tout
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // PUIS appeler onComplete qui fera le reload
         onComplete()
       } catch (e) {
         setError('Erreur : ' + e.message)

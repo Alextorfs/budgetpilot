@@ -12,7 +12,7 @@ import Navigation from './components/Navigation'
 import './styles/global.css'
 
 export default function App() {
-  const { user, setUser, userProfile, activePlan, loadUserData, reset } = useStore()
+  const { user, setUser, userProfile, activePlan, items, loadUserData, reset } = useStore()
   const [appLoading, setAppLoading] = useState(true)
   const [showWizard, setShowWizard] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -73,7 +73,10 @@ export default function App() {
     }} />
   }
 
-  if (!activePlan || showWizard) {
+  // Vérifier si on a besoin du Wizard : pas de plan OU plan sans items
+  const needsWizard = !activePlan || items.length === 0 || showWizard
+
+  if (needsWizard) {
     return <Wizard onComplete={() => {
       window.location.reload()
     }} />
