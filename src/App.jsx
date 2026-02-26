@@ -68,13 +68,15 @@ export default function App() {
   if (!user) return <Auth onAuth={() => {}} />
 
   if (!userProfile) {
-    return <Onboarding onComplete={async () => {
-      await loadUserData(user.id)
+    return <Onboarding onComplete={() => {
+      window.location.reload()
     }} />
   }
 
   if (!activePlan || showWizard) {
-    return <Wizard onComplete={() => setShowWizard(false)} />
+    return <Wizard onComplete={() => {
+      window.location.reload()
+    }} />
   }
 
   // Render avec navigation
