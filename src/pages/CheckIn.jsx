@@ -7,7 +7,7 @@ const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency:
 
 export default function CheckIn({ onBack }) {
   const { userProfile, activePlan, items, createCheckIn, updateProfile, updateMultipleProvisionStocks, getProvisionStock } = useStore()
-  const [currentMonth] = useState(new Date().getMonth() + 1)
+  const [currentMonth] = useState(selectedMonth || (new Date().getMonth() + 1))
   const [saving, setSaving] = useState(false)
   
   // États pour les 4 questions

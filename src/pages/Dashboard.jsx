@@ -20,7 +20,7 @@ export default function Dashboard({ selectedMonth, setSelectedMonth }) {
     )
   }
 
-  if (showCheckIn) return <CheckIn onBack={() => setShowCheckIn(false)} />
+  if (showCheckIn) return <CheckIn selectedMonth={currentMonth} onBack={() => setShowCheckIn(false)} />
 
   const salary = activePlan.monthly_salary_net || 0
   const funSavings = activePlan.fun_savings_monthly_target || 0
