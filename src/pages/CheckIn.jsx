@@ -5,7 +5,7 @@ import '../styles/CheckIn.css'
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
 
-export default function CheckIn({ onBack }) {
+export default function CheckIn({ selectedMonth, onBack }) {
   const { userProfile, activePlan, items, createCheckIn, updateProfile, updateMultipleProvisionStocks, getProvisionStock } = useStore()
   const [currentMonth] = useState(selectedMonth || (new Date().getMonth() + 1))
   const [saving, setSaving] = useState(false)
