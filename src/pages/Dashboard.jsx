@@ -7,7 +7,7 @@ const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Aoû
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0)
 
 export default function Dashboard({ selectedMonth, setSelectedMonth }) {
-  const { userProfile, activePlan, items } = useStore()
+  const { userProfile, activePlan, items, getProvisionStock } = useStore()
   const currentMonth = selectedMonth || (new Date().getMonth() + 1)
   const [showCheckIn, setShowCheckIn] = useState(false)
 
@@ -89,21 +89,30 @@ export default function Dashboard({ selectedMonth, setSelectedMonth }) {
   // PROVISIONS
   // ══════════════════════════════════════════════════════════════════════
   const computeProvision = (item) => {
-    if (!item.payment_month || item.frequency === 'monthly') return 0
-    
-    const myAmount = item.sharing_type === 'common'
-      ? item.amount * ((item.my_share_percent || 100) / 100)
-      : item.amount
-    
-    // LISSÉ : provision constante toute l'année (continue après paiement)
-    if (item.allocation_mode === 'spread') return myAmount / 12
-    
-    // PRORATA : provision selon mois restants (arrête après paiement)
-    if (currentMonth > item.payment_month) return 0
-    const monthsLeft = item.payment_month - currentMonth
-    if (monthsLeft <= 0) return myAmount
-    return myAmount / monthsLeft
-  }
+  if (!item.payment_month || item.frequency === 'monthly') return 0
+  
+  const myAmount = item.sharing_type === 'common'
+    ? item.amount * ((item.my_share_percent || 100) / 100)
+    : item.amount
+  
+  // LISSÉ : provision constante toute l'année
+  if (item.allocation_mode === 'spread') return myAmount / 12
+  
+  // PRORATA : Vérifier le stock actuel
+  const currentStock = getProvisionStock(item.id)
+  const remaining = Math.max(0, myAmount - currentStock)
+  
+  // Si le mois de paiement est passé, pas de provision
+  if (currentMonth > item.payment_month) return 0
+  
+  // Calculer les mois restants JUSQU'AU paiement (inclus le mois de paiement)
+  const monthsLeft = item.payment_month - currentMonth + 1
+  
+  if (monthsLeft <= 0) return remaining  // Si c'est le mois de paiement, virer ce qui reste
+  
+  // Répartir le reste sur les mois restants
+  return remaining / monthsLeft
+}
 
   const computeProgress = (item) => {
     if (!item.payment_month || item.frequency === 'monthly') return 0
