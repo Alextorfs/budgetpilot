@@ -192,7 +192,7 @@ const useStore = create((set, get) => ({
       .update(updates)
       .eq('id', activePlan.id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     set({ activePlan: data })
