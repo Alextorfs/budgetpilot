@@ -40,7 +40,7 @@ export default function Settings({ onBack }) {
   const handleSaveBasics = async () => {
     setSaving(true)
     try {
-      await updatePlan(activePlan.id, {
+      await updatePlan({
         monthly_salary_net: salary,
         fun_savings_monthly_target: funSavings,
       })
